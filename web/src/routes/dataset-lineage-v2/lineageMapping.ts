@@ -77,6 +77,10 @@ export const createReactFlowElements = (
           source: edge.origin,
           target: edge.destination,
           type: 'default',
+          style: {
+            stroke: '#bbb',
+            strokeWidth: 2,
+          },
         }))
     );
   }

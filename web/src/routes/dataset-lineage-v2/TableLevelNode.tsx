@@ -12,22 +12,9 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
   const isCompact = data.isCompact;
 
   const getNodeStyle = () => {
-    if (isJob) {
-      return {
-        background: selected ? '#1565c0' : '#e3f2fd',
-        borderColor: selected ? '#0d47a1' : '#1976d2',
-        color: selected ? '#fff' : '#1976d2',
-      };
-    } else if (isDataset) {
-      return {
-        background: selected ? '#6a1b9a' : '#f3e5f5',
-        borderColor: selected ? '#4a148c' : '#7b1fa2',
-        color: selected ? '#fff' : '#7b1fa2',
-      };
-    }
     return {
       background: selected ? '#424242' : '#fff',
-      borderColor: selected ? '#212121' : '#1a192b',
+      borderColor: selected ? '#212121' : '#bbb',
       color: selected ? '#fff' : '#333',
     };
   };

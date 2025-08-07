@@ -20,7 +20,7 @@ export const createTableLevelElements = (
   lineageGraph: LineageGraph,
   currentGraphNode: Nullable<string> = null,
   isCompact: boolean = false,
-  isFull: boolean = true, // Force to true for debugging
+  isFull: boolean = false, // Default to filtered view like original
   collapsedNodes: Nullable<string> = null
 ) => {
   console.log('=== createTableLevelElements DEBUG ===');
@@ -36,15 +36,30 @@ export const createTableLevelElements = (
   const nodes: Node<TableLevelNodeData>[] = [];
   const edges: Edge[] = [];
 
-  // TEMPORARILY: Always use full graph for debugging
-  let filteredGraph = lineageGraph.graph;
+  // Get downstream and upstream nodes if not showing full lineage
+  let filteredGraph: LineageNode[];
   
-  console.log('Using full graph - nodes:', filteredGraph.map(n => ({ id: n.id, type: n.type })));
-  
-  // Skip filtering for now to debug
-  // if (!isFull && currentGraphNode) {
-  //   ...filtering logic...
-  // }
+  if (isFull) {
+    filteredGraph = lineageGraph.graph;
+    console.log('Using full graph - nodes:', filteredGraph.map(n => ({ id: n.id, type: n.type })));
+  } else {
+    // Filter to show only directly connected nodes (like original table-level)
+    const downstreamNodes = findDownstreamNodes(lineageGraph, currentGraphNode);
+    const upstreamNodes = findUpstreamNodes(lineageGraph, currentGraphNode);
+    
+    filteredGraph = lineageGraph.graph.filter((node) => {
+      return (
+        downstreamNodes.includes(node) || 
+        upstreamNodes.includes(node) || 
+        node.id === currentGraphNode
+      );
+    });
+    
+    console.log('Filtered graph - nodes:', filteredGraph.map(n => ({ id: n.id, type: n.type })));
+    console.log('Current node:', currentGraphNode);
+    console.log('Downstream:', downstreamNodes.map(n => n.id));
+    console.log('Upstream:', upstreamNodes.map(n => n.id));
+  }
 
   // Parse collapsed nodes
   const collapsedNodesArray = collapsedNodes ? collapsedNodes.split(',') : [];
@@ -79,7 +94,9 @@ export const createTableLevelElements = (
       const datasetData = node.data as LineageDataset;
       const height = isNodeCompact || collapsedNodesArray.includes(node.id) 
         ? 24 
-        : Math.min(34 + (datasetData.fields?.length || 0) * 10, 120); // Cap height
+        : Math.max(60, Math.min(34 + (datasetData.fields?.length || 0) * 12, 150)); // Min 60px, cap at 150px
+      
+      console.log(`Dataset node ${node.id} height: ${height} (${datasetData.fields?.length || 0} fields, compact: ${isNodeCompact})`);
 
       const newNode = {
         id: node.id,
@@ -113,10 +130,7 @@ export const createTableLevelElements = (
           target: edge.destination,
           type: 'default',
           style: {
-            stroke: node.id === currentGraphNode || 
-                   filteredGraph.find(n => n.id === edge.destination)?.id === currentGraphNode
-              ? '#1976d2' 
-              : '#bbb',
+            stroke: '#bbb',
             strokeWidth: 2,
           },
         }))

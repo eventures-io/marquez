@@ -7,22 +7,9 @@ const CustomNode: React.FC<NodeProps> = ({ data, isConnectable }) => {
   const isDataset = data.type === 'DATASET';
 
   const getNodeStyle = () => {
-    if (isJob) {
-      return {
-        background: '#e3f2fd',
-        borderColor: '#1976d2',
-        color: '#1976d2',
-      };
-    } else if (isDataset) {
-      return {
-        background: '#f3e5f5',
-        borderColor: '#7b1fa2',
-        color: '#7b1fa2',
-      };
-    }
     return {
       background: '#fff',
-      borderColor: '#1a192b',
+      borderColor: '#bbb',
       color: '#333',
     };
   };
