@@ -16,6 +16,7 @@ import { createBrowserHistory } from 'history'
 import { theme } from '../helpers/theme'
 import ColumnLevel from '../routes/column-level/ColumnLevel'
 import Dashboard from '../routes/dashboard/Dashboard'
+import DatasetLineageV2 from '../routes/dataset-lineage-v2/DatasetLineageV2'
 import Datasets from '../routes/datasets/Datasets'
 import Events from '../routes/events/Events'
 import Header from './header/Header'
@@ -72,6 +73,10 @@ const App = (): ReactElement => {
                       element={<ColumnLevel />}
                     />
                     <Route path={'/lineage/:nodeType/:namespace/:name'} element={<TableLevel />} />
+                    <Route 
+                      path={'/v2/dataset/:namespace/:name'} 
+                      element={<DatasetLineageV2 />} 
+                    />
                     <Route path='*' element={<NotFound />} />
                   </Routes>
                   <Toast />

@@ -7,6 +7,7 @@ import App from './components/App'
 
 // fonts
 import './index.css'
+import '@xyflow/react/dist/style.css'
 
 import './i18n/config'
 

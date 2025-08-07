@@ -7,7 +7,8 @@ module.exports = {
   module: {
     rules: [{
         test: /\.css$/,
-      use: [{
+        exclude: /node_modules/,
+        use: [{
             loader: 'style-loader',
           },
           {
@@ -17,6 +18,19 @@ module.exports = {
               modules : {
                 localIdentName: '[name]__[local]__[hash:base64:5]',
               },
+            }
+        }]
+      },
+      {
+        test: /\.css$/,
+        include: /node_modules/,
+        use: [{
+            loader: 'style-loader',
+          },
+          {
+            loader: 'css-loader',
+            options: {
+              importLoaders: 1,
             }
         }]
       },
