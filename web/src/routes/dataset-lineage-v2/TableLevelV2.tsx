@@ -9,6 +9,7 @@ import {
   useEdgesState,
   ReactFlowProvider,
   addEdge,
+  useReactFlow,
 } from '@xyflow/react';
 import { HEADER_HEIGHT, theme } from '../../helpers/theme';
 import { LineageGraph } from '../../types/api';
@@ -135,7 +136,7 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
         }
 
         // Apply ELK layout
-        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
+        const { nodes: layoutedNodes, edges: layoutedEdges, graphBounds } = await getLayoutedElements(
           reactFlowNodes,
           reactFlowEdges,
           window.innerHeight - HEADER_HEIGHT * 2 - 100 // Adjust for action bar
@@ -143,9 +144,63 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
 
         console.log('Layouted nodes:', layoutedNodes);
         console.log('Layouted edges:', layoutedEdges);
+        console.log('Graph bounds:', graphBounds);
 
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
+        setStoredGraphBounds(graphBounds);
+        
+        // Calculate optimal viewport to fit and center the graph
+        if (graphBounds && layoutedNodes.length > 0) {
+          // Use a slight delay to get accurate container dimensions after render
+          setTimeout(() => {
+            const container = document.querySelector('.react-flow');
+            if (container) {
+              const containerRect = container.getBoundingClientRect();
+              const containerWidth = containerRect.width;
+              const containerHeight = containerRect.height;
+              
+              console.log('Raw container dimensions from getBoundingClientRect:', { containerWidth, containerHeight });
+              console.log('Window dimensions:', { windowWidth: window.innerWidth, windowHeight: window.innerHeight });
+              console.log('Header height:', HEADER_HEIGHT);
+              
+              // Calculate optimal zoom to fit the graph with consistent padding on all sides
+              const padding = 15; // Reduced padding to give more space for the graph
+              const availableWidth = containerWidth - padding * 2;
+              const availableHeight = containerHeight - padding * 2;
+              const graphWidth = graphBounds.maxX - graphBounds.minX;
+              const graphHeight = graphBounds.maxY - graphBounds.minY;
+              
+              const scaleX = availableWidth / graphWidth;
+              const scaleY = availableHeight / graphHeight;
+              const optimalZoom = Math.min(scaleX, scaleY, 0.8); // Cap at 0.8x zoom to ensure all nodes are visible
+              
+              // Calculate position to center the graph in the actual container
+              // Ensure the graph is centered within the available space (accounting for padding)
+              const centerX = (graphBounds.minX + graphBounds.maxX) / 2;
+              const centerY = (graphBounds.minY + graphBounds.maxY) / 2;
+              const x = (containerWidth / 2) - (centerX * optimalZoom);
+              const y = (containerHeight / 2) - (centerY * optimalZoom);
+              
+              // For Y positioning, ensure the top of the graph has minimum padding
+              const topY = padding - graphBounds.minY * optimalZoom;
+              
+              const finalX = x;
+              const finalY = Math.max(topY, y);
+              
+              console.log('Container dimensions:', { containerWidth, containerHeight });
+              console.log('Available space after padding:', { availableWidth, availableHeight });
+              console.log('Graph bounds:', graphBounds);
+              console.log('Graph actual size:', { graphWidth, graphHeight });
+              console.log('Scale factors:', { scaleX, scaleY });
+              console.log('Calculated viewport:', { x, y, zoom: optimalZoom });
+              console.log('Final viewport (with padding):', { x: finalX, y: finalY, zoom: optimalZoom });
+              
+              // Update viewport state with final coordinates that respect padding
+              setViewportState({ x: finalX, y: finalY, zoom: optimalZoom });
+            }
+          }, 150); // Slight delay to ensure container is fully rendered
+        }
       } catch (error) {
         console.error('Error processing lineage data:', error);
       }
@@ -171,6 +226,44 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
   const onError = (error: Error) => {
     console.error('ReactFlow error:', error);
   };
+
+  // Create viewport state
+  const [viewport, setViewportState] = useState({ x: 0, y: 0, zoom: 1 });
+  const [storedGraphBounds, setStoredGraphBounds] = useState(null);
+  
+  // Custom fit view function that uses our viewport calculation
+  const customFitView = useCallback(() => {
+    if (!storedGraphBounds) return;
+    
+    const container = document.querySelector('.react-flow');
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const containerHeight = containerRect.height;
+      
+      const padding = 15;
+      const availableWidth = containerWidth - padding * 2;
+      const availableHeight = containerHeight - padding * 2;
+      const graphWidth = storedGraphBounds.maxX - storedGraphBounds.minX;
+      const graphHeight = storedGraphBounds.maxY - storedGraphBounds.minY;
+      
+      const scaleX = availableWidth / graphWidth;
+      const scaleY = availableHeight / graphHeight;
+      const optimalZoom = Math.min(scaleX, scaleY, 0.8);
+      
+      const centerX = (storedGraphBounds.minX + storedGraphBounds.maxX) / 2;
+      const centerY = (storedGraphBounds.minY + storedGraphBounds.maxY) / 2;
+      const x = (containerWidth / 2) - (centerX * optimalZoom);
+      const y = (containerHeight / 2) - (centerY * optimalZoom);
+      
+      const topY = padding - storedGraphBounds.minY * optimalZoom;
+      
+      const finalX = x;
+      const finalY = Math.max(topY, y);
+      
+      setViewportState({ x: finalX, y: finalY, zoom: optimalZoom });
+    }
+  }, [storedGraphBounds]);
 
   console.log('TableLevelV2 render - nodes:', nodes.length, nodes);
   console.log('TableLevelV2 render - edges:', edges.length, edges);
@@ -205,7 +298,10 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
         onRefresh={fetchLineageData}
       />
       
-      <Box height={`calc(100vh - ${HEADER_HEIGHT}px - ${HEADER_HEIGHT}px - 1px)`}>
+      <Box 
+        height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
+        sx={{ overflow: 'hidden', backgroundColor: 'white' }}
+      >
         {/* Drawer for node details */}
         <Drawer
           anchor="right"
@@ -244,11 +340,12 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
               nodeTypes={nodeTypes}
               style={{ width: '100%', height: '100%' }}
               className="react-flow"
-              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-              fitView
+              viewport={viewport}
+              onViewportChange={setViewportState}
+              fitViewOptions={{ padding: 50 }}
             >
-              <Background color="#f0f0f0" />
-              <ReactFlowZoomControls />
+              <Background />
+              <ReactFlowZoomControls onFitView={customFitView} />
             </ReactFlow>
           </div>
         </ReactFlowProvider>

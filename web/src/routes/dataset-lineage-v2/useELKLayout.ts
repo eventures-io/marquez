@@ -76,17 +76,13 @@ const useELKLayout = () => {
 
     const layoutedGraph = await elk.layout(graph);
     
-    // Calculate vertical offset to center the layout
-    const graphHeight = layoutedGraph.height || 0;
-    const verticalOffset = Math.max(0, (containerHeight - graphHeight) / 2);
-
     let layoutedNodes = nodes.map((node) => {
       const elkNode = layoutedGraph.children?.find((n) => n.id === node.id);
       return {
         ...node,
         position: {
-          x: (elkNode?.x || 0) + 50, // Add some left margin
-          y: (elkNode?.y || 0) + verticalOffset,
+          x: elkNode?.x || 0,
+          y: elkNode?.y || 0,
         },
       };
     });
@@ -96,7 +92,33 @@ const useELKLayout = () => {
     layoutedNodes = ensureMinimumVerticalSpacing(layoutedNodes, 15);
     console.log('After spacing adjustment:', layoutedNodes.map(n => ({ id: n.id, x: n.position.x, y: n.position.y, height: n.style?.height })));
 
-    return { nodes: layoutedNodes, edges };
+    return { 
+      nodes: layoutedNodes, 
+      edges,
+      // Return graph bounds for optimal viewport calculation
+      graphBounds: layoutedNodes.length > 0 ? (() => {
+        const bounds = {
+          width: layoutedGraph.width || 0,
+          height: layoutedGraph.height || 0,
+          minX: Math.min(...layoutedNodes.map(n => n.position.x)),
+          maxX: Math.max(...layoutedNodes.map(n => n.position.x + (n.style?.width || 150))),
+          minY: Math.min(...layoutedNodes.map(n => n.position.y)),
+          maxY: Math.max(...layoutedNodes.map(n => n.position.y + (n.style?.height || 40))),
+        };
+        
+        console.log('Calculated graph bounds:', bounds);
+        console.log('Node positions and heights:', layoutedNodes.map(n => ({ 
+          id: n.id, 
+          x: n.position.x, 
+          y: n.position.y, 
+          width: n.style?.width, 
+          height: n.style?.height,
+          bottom: n.position.y + (n.style?.height || 40)
+        })));
+        
+        return bounds;
+      })() : null
+    };
   }, []);
 
   return { getLayoutedElements };

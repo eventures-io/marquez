@@ -7,10 +7,12 @@ import MQTooltip from '../../components/core/tooltip/MQTooltip';
 
 interface ReactFlowZoomControlsProps {
   onCenterOnNode?: () => void;
+  onFitView?: () => void;
 }
 
 export const ReactFlowZoomControls: React.FC<ReactFlowZoomControlsProps> = ({
   onCenterOnNode,
+  onFitView,
 }) => {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
 
@@ -23,7 +25,11 @@ export const ReactFlowZoomControls: React.FC<ReactFlowZoomControlsProps> = ({
   };
 
   const handleFitView = () => {
-    fitView({ duration: 300, padding: 0.2 });
+    if (onFitView) {
+      onFitView();
+    } else {
+      fitView({ duration: 300, padding: 0.2 });
+    }
   };
 
   return (
