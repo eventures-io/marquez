@@ -62,7 +62,6 @@ const useELKLayout = () => {
       children: nodes.map((node) => {
         const width = node.style?.width || 150;
         const height = node.style?.height || 40;
-        console.log(`ELK node ${node.id}: width=${width}, height=${height}`);
         return {
           id: node.id,
           width,
@@ -90,9 +89,7 @@ const useELKLayout = () => {
     });
 
     // Post-process to ensure minimum vertical spacing of 15px
-    console.log('Before spacing adjustment:', layoutedNodes.map(n => ({ id: n.id, x: n.position.x, y: n.position.y, height: n.style?.height })));
     layoutedNodes = ensureMinimumVerticalSpacing(layoutedNodes, 15);
-    console.log('After spacing adjustment:', layoutedNodes.map(n => ({ id: n.id, x: n.position.x, y: n.position.y, height: n.style?.height })));
 
     return { 
       nodes: layoutedNodes, 
@@ -108,15 +105,6 @@ const useELKLayout = () => {
           maxY: Math.max(...layoutedNodes.map(n => n.position.y + (n.style?.height || 40))),
         };
         
-        console.log('Calculated graph bounds:', bounds);
-        console.log('Node positions and heights:', layoutedNodes.map(n => ({ 
-          id: n.id, 
-          x: n.position.x, 
-          y: n.position.y, 
-          width: n.style?.width, 
-          height: n.style?.height,
-          bottom: n.position.y + (n.style?.height || 40)
-        })));
         
         return bounds;
       })() : null

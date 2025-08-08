@@ -39,7 +39,7 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              py: 0.25,
+              py: 0.5,
               px: 1,
               fontSize: '10px',
               backgroundColor: 'rgba(0,0,0,0.05)',
@@ -50,9 +50,9 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
             <Typography variant="caption" sx={{ fontWeight: 'bold', fontSize: '9px' }}>
               {field.name}
             </Typography>
-            <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.7 }}>
+            {/* <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.7 }}>
               {field.type}
-            </Typography>
+            </Typography> */}
           </Box>
         ))}
         {data.dataset.fields.length > 5 && (
@@ -104,7 +104,7 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
           <Typography variant="caption" sx={{ fontSize: '10px', opacity: 0.8 }}>
             {isJob ? '⚙️ JOB' : '📊 DATASET'}
           </Typography>
-          {data.job?.type && (
+          {/* {data.job?.type && (
             <Chip
               label={data.job.type}
               size="small"
@@ -116,7 +116,7 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
                 color: 'inherit',
               }}
             />
-          )}
+          )} */}
         </Box>
       )}
 

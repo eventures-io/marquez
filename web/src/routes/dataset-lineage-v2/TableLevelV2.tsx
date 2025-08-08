@@ -87,7 +87,6 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
         depth
       );
       setLineageData(data);
-      console.log('Fetched lineage data:', data);
     } catch (error) {
       console.error('Failed to fetch lineage:', error);
       setError('Failed to fetch lineage data');
@@ -110,13 +109,10 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
   useEffect(() => {
     const updateLayout = async () => {
       if (!lineageData || lineageData.graph.length === 0) {
-        console.log('No lineage data available for layout');
         return;
       }
 
       try {
-        console.log('Processing lineage data:', lineageData);
-        console.log('Settings:', { currentNodeId, isCompact, isFull, collapsedNodes });
 
         // Convert lineage data to ReactFlow format
         const { nodes: reactFlowNodes, edges: reactFlowEdges } = createTableLevelElements(
@@ -127,11 +123,8 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
           collapsedNodes
         );
 
-        console.log('Generated ReactFlow nodes:', reactFlowNodes);
-        console.log('Generated ReactFlow edges:', reactFlowEdges);
 
         if (reactFlowNodes.length === 0) {
-          console.warn('No nodes generated from lineage data');
           return;
         }
 
@@ -142,13 +135,17 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
           window.innerHeight - HEADER_HEIGHT * 2 - 100 // Adjust for action bar
         );
 
-        console.log('Layouted nodes:', layoutedNodes);
-        console.log('Layouted edges:', layoutedEdges);
-        console.log('Graph bounds:', graphBounds);
 
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
-        setStoredGraphBounds(graphBounds);
+        // Clear nodes and edges first to force ReactFlow to completely re-render
+        setNodes([]);
+        setEdges([]);
+        
+        // Then set the new layout after a brief delay
+        setTimeout(() => {
+          setNodes(layoutedNodes);
+          setEdges(layoutedEdges);
+          setStoredGraphBounds(graphBounds);
+        }, 10);
         
         // Calculate optimal viewport to fit and center the graph
         if (graphBounds && layoutedNodes.length > 0) {
@@ -160,9 +157,6 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
               const containerWidth = containerRect.width;
               const containerHeight = containerRect.height;
               
-              console.log('Raw container dimensions from getBoundingClientRect:', { containerWidth, containerHeight });
-              console.log('Window dimensions:', { windowWidth: window.innerWidth, windowHeight: window.innerHeight });
-              console.log('Header height:', HEADER_HEIGHT);
               
               // Calculate optimal zoom to fit the graph with consistent padding on all sides
               const padding = 15; // Reduced padding to give more space for the graph
@@ -188,13 +182,6 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
               const finalX = x;
               const finalY = Math.max(topY, y);
               
-              console.log('Container dimensions:', { containerWidth, containerHeight });
-              console.log('Available space after padding:', { availableWidth, availableHeight });
-              console.log('Graph bounds:', graphBounds);
-              console.log('Graph actual size:', { graphWidth, graphHeight });
-              console.log('Scale factors:', { scaleX, scaleY });
-              console.log('Calculated viewport:', { x, y, zoom: optimalZoom });
-              console.log('Final viewport (with padding):', { x: finalX, y: finalY, zoom: optimalZoom });
               
               // Update viewport state with final coordinates that respect padding
               setViewportState({ x: finalX, y: finalY, zoom: optimalZoom });
@@ -265,9 +252,6 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
     }
   }, [storedGraphBounds]);
 
-  console.log('TableLevelV2 render - nodes:', nodes.length, nodes);
-  console.log('TableLevelV2 render - edges:', edges.length, edges);
-  console.log('TableLevelV2 render - nodeTypes:', nodeTypes);
 
   if (loading) {
     return (
@@ -329,7 +313,7 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
         </Drawer>
 
         <ReactFlowProvider>
-          <div style={{ width: '100%', height: '100%', border: '2px solid red' }}>
+          <div style={{ width: '100%', height: '100%' }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}

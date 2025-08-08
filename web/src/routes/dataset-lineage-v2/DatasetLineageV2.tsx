@@ -27,8 +27,6 @@ const DatasetLineageV2: React.FC = () => {
       setError(null)
       getLineage('DATASET', namespace, name, depth)
         .then((data) => {
-          console.log('Fetched lineage data:', data)
-          console.log('Current node ID:', currentNodeId)
           setLineageData(data)
           setLoading(false)
         })
