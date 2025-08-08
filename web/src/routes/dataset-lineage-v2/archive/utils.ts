@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { Node, Edge } from '@xyflow/react'
-import { LineageGraph } from '../../types/api'
+import { LineageGraph } from '../../../types/api'
 
 export interface ReactFlowNodeData {
   label: string

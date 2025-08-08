@@ -12,7 +12,7 @@ import {
   Panel,
 } from '@xyflow/react'
 import ELK from 'elkjs'
-import { LineageGraph } from '../../types/api'
+import { LineageGraph } from '../../../types/api'
 import { convertLineageToReactFlow, ReactFlowNodeData } from './utils'
 import { Box, Typography } from '@mui/material'
 

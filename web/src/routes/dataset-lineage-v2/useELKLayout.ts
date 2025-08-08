@@ -41,15 +41,15 @@ const ensureMinimumVerticalSpacing = (nodes: Node[], minSpacing: number): Node[]
 const layoutOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.spacing.nodeNode': '80', // Reduced vertical spacing for better alignment
+  'elk.spacing.nodeNode': '120', // Increased vertical spacing to prevent overlaps
   'elk.layered.spacing.nodeNodeBetweenLayers': '200', // Horizontal spacing between layers
   'elk.layered.nodePlacement.strategy': 'SIMPLE', // Simpler alignment strategy
   'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP', // Align nodes to top-left
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP', // Reduce edge crossings
   'elk.layered.layering.strategy': 'LONGEST_PATH', // Better layer assignment
   'elk.layered.nodePlacement.linearSegments.deflectionDampening': '0.1',
-  'elk.spacing.edgeNode': '30',
-  'elk.spacing.edgeEdge': '20',
+  'elk.spacing.edgeNode': '40', // Increased edge to node spacing
+  'elk.spacing.edgeEdge': '30', // Increased edge to edge spacing
   'elk.padding': '[top=40,left=40,bottom=40,right=40]',
   'elk.separateConnectedComponents': 'false',
 };

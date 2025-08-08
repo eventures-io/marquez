@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { Node, Edge } from '@xyflow/react';
-import { LineageGraph } from '../../types/api';
-import { JobOrDataset, LineageDataset, LineageJob, LineageNode } from '../../types/lineage';
-import { Nullable } from '../../types/util/Nullable';
+import { LineageGraph } from '../../../types/api';
+import { JobOrDataset, LineageDataset, LineageJob, LineageNode } from '../../../types/lineage';
+import { Nullable } from '../../../types/util/Nullable';
 
 export interface LineageNodeData {
   label: string;
