@@ -41,14 +41,16 @@ const ensureMinimumVerticalSpacing = (nodes: Node[], minSpacing: number): Node[]
 const layoutOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.spacing.nodeNode': '120', // Much larger minimum spacing between nodes
+  'elk.spacing.nodeNode': '80', // Reduced vertical spacing for better alignment
   'elk.layered.spacing.nodeNodeBetweenLayers': '200', // Horizontal spacing between layers
-  'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-  'elk.layered.spacing.edgeNodeBetweenLayers': '60',
-  'elk.spacing.edgeNode': '40',
-  'elk.spacing.edgeEdge': '25',
+  'elk.layered.nodePlacement.strategy': 'SIMPLE', // Simpler alignment strategy
+  'elk.layered.nodePlacement.bk.fixedAlignment': 'LEFTUP', // Align nodes to top-left
+  'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP', // Reduce edge crossings
+  'elk.layered.layering.strategy': 'LONGEST_PATH', // Better layer assignment
+  'elk.layered.nodePlacement.linearSegments.deflectionDampening': '0.1',
+  'elk.spacing.edgeNode': '30',
+  'elk.spacing.edgeEdge': '20',
   'elk.padding': '[top=40,left=40,bottom=40,right=40]',
-  'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   'elk.separateConnectedComponents': 'false',
 };
 
