@@ -8,7 +8,7 @@ import  React, {
 } from 'react';
 import{ Panel } from '@xyflow/react';
 
-import NodeInspector from '../../routes/dataset-lineage-v2/NodeInspector';
+import NodeInspector from './nodeinspector';
 // import ChangeLogger from './ChangeLogger';
 // import ViewportLogger from './ViewportLogger';
 
