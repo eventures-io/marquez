@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Node, Edge } from '@xyflow/react';
 import { LineageGraph } from '../../types/api';
 import { JobOrDataset, LineageDataset, LineageJob, LineageNode } from '../../types/lineage';
@@ -11,6 +10,7 @@ export interface TableLevelNodeData {
   job?: LineageJob;
   isCompact?: boolean;
   id?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -67,7 +67,7 @@ export const createTableLevelElements = (
         },
         data: {
           label: jobData.simpleName || jobData.name,
-          type: 'JOB',
+          type: 'JOB' as JobOrDataset,
           job: jobData,
           isCompact: isNodeCompact,
           id: node.id,
@@ -91,7 +91,7 @@ export const createTableLevelElements = (
         },
         data: {
           label: datasetData.name,
-          type: 'DATASET',
+          type: 'DATASET' as JobOrDataset,
           dataset: datasetData,
           isCompact: isNodeCompact,
           id: node.id,
