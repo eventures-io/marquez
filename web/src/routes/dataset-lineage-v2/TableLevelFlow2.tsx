@@ -40,8 +40,7 @@ const HEADER_HEIGHT = 64 + 1;
 const StyledDrawerPaper = styled('div')(({ theme }) => ({
   backgroundColor: theme.palette.background.default,
   backgroundImage: 'none',
-  marginTop: `${HEADER_HEIGHT}px`,
-  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+  height: '100%',
   width: 400,
 }));
 
@@ -132,7 +131,7 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
       
       <Box 
         height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
-        sx={{ overflow: 'hidden', backgroundColor: 'white' }}
+        sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
         {/* Drawer for node details */}
         <Drawer
@@ -143,8 +142,19 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
             newParams.delete('tableLevelNode');
             setSearchParams(newParams);
           }}
+          variant="persistent"
+          ModalProps={{
+            container: () => document.querySelector('.graph-container'),
+            style: { position: 'absolute' },
+          }}
           PaperProps={{
             component: StyledDrawerPaper,
+            sx: {
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              height: '100%',
+            },
           }}
         >
           <Box p={2}>
@@ -155,7 +165,7 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
         </Drawer>
 
         <ReactFlowProvider>
-          <div style={{ width: '100%', height: '100%' }}>
+          <div className="graph-container" style={{ width: '100%', height: '100%' }}>
             <ReactFlow
               nodes={nodes}
               edges={edges}
