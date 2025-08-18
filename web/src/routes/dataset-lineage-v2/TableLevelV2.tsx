@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Box, Drawer } from '@mui/material';
+import { Box, Drawer, styled } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -11,7 +11,6 @@ import {
   addEdge,
   useReactFlow,
 } from '@xyflow/react';
-import { HEADER_HEIGHT, theme } from '../../helpers/theme';
 import { LineageGraph } from '../../types/api';
 import { getLineage } from '../../store/requests/lineage';
 import { generateNodeId } from '../../helpers/nodes';
@@ -32,6 +31,16 @@ interface TableLevelV2Props {
   name?: string;
   nodeType?: string;
 }
+
+HEADER_HEIGHT = 64 + 1;
+
+const StyledDrawerPaper = styled('div')(({ theme }) => ({
+  backgroundColor: theme.palette.background.default,
+  backgroundImage: 'none',
+  marginTop: `${HEADER_HEIGHT}px`,
+  height: `calc(100vh - ${HEADER_HEIGHT}px)`,
+  width: 400,
+}));
 
 const TableLevelV2: React.FC<TableLevelV2Props> = ({ 
   lineageData: propLineageData,
@@ -296,13 +305,7 @@ const TableLevelV2: React.FC<TableLevelV2Props> = ({
             setSearchParams(newParams);
           }}
           PaperProps={{
-            sx: {
-              backgroundColor: theme.palette.background.default,
-              backgroundImage: 'none',
-              mt: `${HEADER_HEIGHT}px`,
-              height: `calc(100vh - ${HEADER_HEIGHT}px)`,
-              width: 400,
-            },
+            component: StyledDrawerPaper,
           }}
         >
           <Box p={2}>

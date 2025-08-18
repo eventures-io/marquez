@@ -1,9 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
-import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography } from '@mui/material';
-import { HEADER_HEIGHT, theme } from '../../helpers/theme';
-import { truncateText } from '../../helpers/text';
+import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography, styled } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 
 interface TableLevelActionBarProps {
@@ -16,6 +14,21 @@ interface TableLevelActionBarProps {
   setIsFull: (isFull: boolean) => void;
   onRefresh: () => void;
 }
+
+const HEADER_HEIGHT = 64 + 1;
+
+const StyledActionBar = styled(Box)(({ theme }) => ({
+  borderBottomWidth: 2,
+  borderTopWidth: 0,
+  borderLeftWidth: 0,
+  borderRightWidth: 0,
+  borderStyle: 'dashed',
+  borderColor: theme.palette.secondary.main,
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  px: 2,
+}));
 
 export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
   nodeType,
@@ -31,21 +44,7 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
   const navigate = useNavigate();
 
   return (
-    <Box
-      sx={{
-        borderBottomWidth: 2,
-        borderTopWidth: 0,
-        borderLeftWidth: 0,
-        borderRightWidth: 0,
-        borderStyle: 'dashed',
-      }}
-      display="flex"
-      height={HEADER_HEIGHT - 1}
-      justifyContent="space-between"
-      alignItems="center"
-      px={2}
-      borderColor={theme.palette.secondary.main}
-    >
+    <StyledActionBar height={HEADER_HEIGHT - 1}>
       <Box display="flex" alignItems="center">
         <IconButton
           size="small"
@@ -63,14 +62,34 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
           <Typography variant="body2" color="text.secondary">Namespace</Typography>
-          <Typography variant="body2" fontFamily="monospace">
-            {namespace ? truncateText(namespace, 40) : 'Unknown namespace name'}
+          <Typography 
+            variant="body2" 
+            fontFamily="monospace"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '300px'
+            }}
+          >
+            {namespace || 'Unknown namespace name'}
           </Typography>
         </Box>
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
           <Typography variant="body2" color="text.secondary">Name</Typography>
-          <Typography variant="body2" fontFamily="monospace">{name ? truncateText(name, 40) : 'Unknown dataset name'}</Typography>
+          <Typography 
+            variant="body2" 
+            fontFamily="monospace"
+            sx={{
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '300px'
+            }}
+          >
+            {name || 'Unknown dataset name'}
+          </Typography>
         </Box>
       </Box>
       <Box display="flex" alignItems="center">
@@ -118,6 +137,6 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
           />
         </Box>
       </Box>
-    </Box>
+    </StyledActionBar>
   );
 };
