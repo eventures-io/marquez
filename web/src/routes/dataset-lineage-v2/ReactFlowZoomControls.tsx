@@ -3,7 +3,6 @@ import React from 'react';
 import { Box, IconButton, Stack } from '@mui/material';
 import { ZoomIn, ZoomOut, CenterFocusStrong, FitScreen } from '@mui/icons-material';
 import { useReactFlow } from '@xyflow/react';
-import MQTooltip from '../../components/core/tooltip/MQTooltip';
 
 interface ReactFlowZoomControlsProps {
   onCenterOnNode?: () => void;
@@ -45,30 +44,22 @@ export const ReactFlowZoomControls: React.FC<ReactFlowZoomControlsProps> = ({
       }}
     >
       <Stack direction="column" spacing={0}>
-        <MQTooltip title="Zoom In">
-          <IconButton onClick={handleZoomIn} size="small">
-            <ZoomIn fontSize="small" />
-          </IconButton>
-        </MQTooltip>
+        <IconButton onClick={handleZoomIn} size="small">
+          <ZoomIn fontSize="small" />
+        </IconButton>
         
-        <MQTooltip title="Zoom Out">
-          <IconButton onClick={handleZoomOut} size="small">
-            <ZoomOut fontSize="small" />
-          </IconButton>
-        </MQTooltip>
+        <IconButton onClick={handleZoomOut} size="small">
+          <ZoomOut fontSize="small" />
+        </IconButton>
         
-        <MQTooltip title="Fit View">
-          <IconButton onClick={handleFitView} size="small">
-            <FitScreen fontSize="small" />
-          </IconButton>
-        </MQTooltip>
+        <IconButton onClick={handleFitView} size="small">
+          <FitScreen fontSize="small" />
+        </IconButton>
         
         {onCenterOnNode && (
-          <MQTooltip title="Center on Node">
-            <IconButton onClick={onCenterOnNode} size="small">
-              <CenterFocusStrong fontSize="small" />
-            </IconButton>
-          </MQTooltip>
+          <IconButton onClick={onCenterOnNode} size="small">
+            <CenterFocusStrong fontSize="small" />
+          </IconButton>
         )}
       </Stack>
     </Box>

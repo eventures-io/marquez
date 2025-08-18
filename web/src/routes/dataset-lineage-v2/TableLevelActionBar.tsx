@@ -1,12 +1,10 @@
 // @ts-nocheck
 import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
-import { Divider, FormControlLabel, Switch, TextField, Box, IconButton } from '@mui/material';
+import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography } from '@mui/material';
 import { HEADER_HEIGHT, theme } from '../../helpers/theme';
 import { truncateText } from '../../helpers/text';
 import { useNavigate, useParams } from 'react-router-dom';
-import MQTooltip from '../../components/core/tooltip/MQTooltip';
-import MqText from '../../components/core/text/MqText';
 
 interface TableLevelActionBarProps {
   nodeType: 'DATASET' | 'JOB';
@@ -49,45 +47,41 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
       borderColor={theme.palette.secondary.main}
     >
       <Box display="flex" alignItems="center">
-        <MQTooltip title={`Back to ${nodeType === 'JOB' ? 'jobs' : 'datasets'}`}>
-          <IconButton
-            size="small"
-            sx={{ mr: 2 }}
-            onClick={() => navigate(nodeType === 'JOB' ? '/' : '/datasets')}
-          >
-            <ArrowBackIosRounded fontSize="small" />
-          </IconButton>
-        </MQTooltip>
-        <MqText heading>{nodeType === 'JOB' ? 'Jobs' : 'Datasets'}</MqText>
+        <IconButton
+          size="small"
+          sx={{ mr: 2 }}
+          onClick={() => navigate(nodeType === 'JOB' ? '/' : '/datasets')}
+        >
+          <ArrowBackIosRounded fontSize="small" />
+        </IconButton>
+        <Typography variant="h6">{nodeType === 'JOB' ? 'Jobs' : 'Datasets'}</Typography>
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
-          <MqText subdued>Mode</MqText>
-          <MqText font="mono">Table Level V2</MqText>
+          <Typography variant="body2" color="text.secondary">Mode</Typography>
+          <Typography variant="body2" fontFamily="monospace">Table Level V2</Typography>
         </Box>
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
-          <MqText subdued>Namespace</MqText>
-          <MqText font="mono">
+          <Typography variant="body2" color="text.secondary">Namespace</Typography>
+          <Typography variant="body2" fontFamily="monospace">
             {namespace ? truncateText(namespace, 40) : 'Unknown namespace name'}
-          </MqText>
+          </Typography>
         </Box>
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
-          <MqText subdued>Name</MqText>
-          <MqText font="mono">{name ? truncateText(name, 40) : 'Unknown dataset name'}</MqText>
+          <Typography variant="body2" color="text.secondary">Name</Typography>
+          <Typography variant="body2" fontFamily="monospace">{name ? truncateText(name, 40) : 'Unknown dataset name'}</Typography>
         </Box>
       </Box>
       <Box display="flex" alignItems="center">
-        <MQTooltip title="Refresh">
-          <IconButton
-            sx={{ mr: 2 }}
-            color="primary"
-            size="small"
-            onClick={onRefresh}
-          >
-            <Refresh fontSize="small" />
-          </IconButton>
-        </MQTooltip>
+        <IconButton
+          sx={{ mr: 2 }}
+          color="primary"
+          size="small"
+          onClick={onRefresh}
+        >
+          <Refresh fontSize="small" />
+        </IconButton>
         <TextField
           id="table-level-depth"
           type="number"
@@ -110,7 +104,7 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
                 onChange={(_, checked) => setIsFull(checked)}
               />
             }
-            label={<MqText font="mono">Full Graph</MqText>}
+            label={<Typography variant="body2" fontFamily="monospace">Full Graph</Typography>}
           />
           <FormControlLabel
             control={
@@ -120,7 +114,7 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
                 onChange={(_, checked) => setIsCompact(checked)}
               />
             }
-            label={<MqText font="mono">Compact Nodes</MqText>}
+            label={<Typography variant="body2" fontFamily="monospace">Compact Nodes</Typography>}
           />
         </Box>
       </Box>
