@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useJobDetails } from './useJobDetails';
+import DatasetDetailsPane from './DatasetDetailsPane';
 
 interface JobDetailsPaneProps {
   selectedNodeData: any | null;
@@ -15,10 +16,19 @@ const JobDetailsPane: React.FC<JobDetailsPaneProps> = ({
 
   if (!selectedNodeData) return null;
 
+  if (selectedNodeData.type === 'DATASET') {
+    return (
+      <DatasetDetailsPane 
+        selectedNodeData={selectedNodeData}
+        selectedNodeId={selectedNodeId}
+      />
+    );
+  }
+
   if (selectedNodeData.type !== 'JOB') {
     return (
       <Box p={2}>
-        <Typography variant="h6">Dataset Details</Typography>
+        <Typography variant="h6">Unknown Node Type</Typography>
         <Typography variant="body2">Selected node: {selectedNodeId}</Typography>
         <Typography variant="body2">Type: {selectedNodeData.type}</Typography>
       </Box>
