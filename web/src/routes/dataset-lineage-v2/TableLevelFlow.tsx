@@ -37,7 +37,7 @@ interface TableLevelFlowProps {
 
 const HEADER_HEIGHT = 64 + 1;
 
-const CustomDrawer = styled('div')<{ open: boolean }>(({ theme, open }) => ({
+const DetailsPane = styled('div')<{ open: boolean }>(({ theme, open }) => ({
   position: 'absolute',
   top: 0,
   right: 0,
@@ -46,7 +46,7 @@ const CustomDrawer = styled('div')<{ open: boolean }>(({ theme, open }) => ({
   backgroundColor: theme.palette.background.default,
   backgroundImage: 'none',
   boxShadow: '-2px 0 8px rgba(0,0,0,0.15)',
-  transform: open ? 'translateX(0)' : 'translateX(100%)',
+  transform: open ? 'translateX(0)' : 'translateX(calc(100% + 10px))',
   transition: 'transform 0.3s ease-in-out',
   zIndex: 1000,
   overflow: 'auto',
@@ -194,14 +194,14 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
-        {/* Custom drawer for node details */}
-        <CustomDrawer ref={drawerRef} open={isDrawerOpen}>
+        {/* Details pane for node details */}
+        <DetailsPane ref={drawerRef} open={isDrawerOpen}>
           <Box p={2}>
             <h3>Node Details</h3>
             <p>Selected node: {selectedNodeId}</p>
             {/* TODO: Add detailed node information */}
           </Box>
-        </CustomDrawer>
+        </DetailsPane>
 
         <ReactFlowProvider>
           <div className="graph-container" style={{ width: '100%', height: '100%' }}>
