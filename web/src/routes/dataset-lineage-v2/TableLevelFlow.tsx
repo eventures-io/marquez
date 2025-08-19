@@ -291,7 +291,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
         {/* Details pane for node details */}
-        <DetailsPane ref={drawerRef} open={isDrawerOpen}>
+        <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
           {renderJobDetails()}
         </DetailsPane>
 
