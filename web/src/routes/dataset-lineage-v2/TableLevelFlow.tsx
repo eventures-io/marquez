@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, styled, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -18,6 +18,7 @@ import TableLevelNode from './TableLevelNode';
 import { getJob } from '../../store/requests/jobs';
 import { getJobFacets } from '../../store/requests/facets';
 import { Job, Run } from '../../types/api';
+import DetailsPane from './DetailsPane';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {
@@ -40,20 +41,6 @@ interface TableLevelFlowProps {
 
 const HEADER_HEIGHT = 64 + 1;
 
-const DetailsPane = styled('div')<{ open: boolean }>(({ theme, open }) => ({
-  position: 'absolute',
-  top: 0,
-  right: 0,
-  height: '100%',
-  width: 400,
-  backgroundColor: theme.palette.background.default,
-  backgroundImage: 'none',
-  boxShadow: '-2px 0 8px rgba(0,0,0,0.15)',
-  transform: open ? 'translateX(0)' : 'translateX(calc(100% + 10px))',
-  transition: 'transform 0.3s ease-in-out',
-  zIndex: 1000,
-  overflow: 'auto',
-}));
 
 const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   lineageGraph,
