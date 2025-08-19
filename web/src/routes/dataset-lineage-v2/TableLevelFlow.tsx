@@ -2,28 +2,14 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import {
-  ReactFlow,
-  Background,
-  useNodesState,
-  useEdgesState,
-  ReactFlowProvider,
-  addEdge,
-  Controls,
-  MiniMap,
-} from '@xyflow/react';
-import useELKLayout from './useELKLayout';
 import { TableLevelActionBar } from './TableLevelActionBar';
-import TableLevelNode from './TableLevelNode';
 import { getJob } from '../../store/requests/jobs';
 import { getJobFacets } from '../../store/requests/facets';
 import { Job, Run } from '../../types/api';
 import DetailsPane from './DetailsPane';
+import LineageGraph from './LineageGraph';
 import '@xyflow/react/dist/style.css';
 
-const nodeTypes = {
-  tableLevel: TableLevelNode,
-};
 
 interface TableLevelFlowProps {
   lineageGraph: { nodes: any[], edges: any[] } | null;
@@ -63,11 +49,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   const [jobDetails, setJobDetails] = useState<Job | null>(null);
   const [jobFacets, setJobFacets] = useState<any>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  
-  // ReactFlow state
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { getLayoutedElements } = useELKLayout();
 
   // Handle click outside drawer to close it
   useEffect(() => {
@@ -100,41 +81,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
     };
   }, [isDrawerOpen]);
 
-  // Update layout when lineage graph changes
-  useEffect(() => {
-    const updateLayout = async () => {
-      if (!lineageGraph || !lineageGraph.nodes || lineageGraph.nodes.length === 0) {
-        setNodes([]);
-        setEdges([]);
-        return;
-      }
-
-      try {
-        // Apply ELK layout to the pre-mapped nodes and edges
-        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
-          lineageGraph.nodes,
-          lineageGraph.edges,
-          window.innerHeight - HEADER_HEIGHT * 2 - 100 // Adjust for action bar
-        );
-
-        // Add click handler to node data
-        const nodesWithClickHandler = layoutedNodes.map(node => ({
-          ...node,
-          data: {
-            ...node.data,
-            onNodeClick: (nodeId: string) => handleNodeClick(nodeId, node.data),
-          },
-        }));
-
-        setNodes(nodesWithClickHandler);
-        setEdges(layoutedEdges);
-      } catch (error) {
-        console.error('Error processing lineage data:', error);
-      }
-    };
-
-    updateLayout();
-  }, [lineageGraph, getLayoutedElements, setNodes, setEdges]);
 
   // Fetch job details when a job node is selected
   useEffect(() => {
@@ -163,11 +109,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
     fetchJobDetails();
   }, [selectedNodeData]);
 
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     setSelectedNodeId(nodeId);
     setSelectedNodeData(nodeData);
@@ -183,10 +124,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
     setJobDetails(null);
     setJobFacets(null);
   }, []);
-
-  const onError = (error: Error) => {
-    console.error('ReactFlow error:', error);
-  };
 
   const renderJobDetails = () => {
     if (!selectedNodeData) return null;
@@ -257,21 +194,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
     );
   };
 
-  if (loading) {
-    return (
-      <Box height={`calc(100vh - ${HEADER_HEIGHT}px)`} display="flex" alignItems="center" justifyContent="center">
-        Loading lineage data...
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box height={`calc(100vh - ${HEADER_HEIGHT}px)`} p={2}>
-        Error: {error}
-      </Box>
-    );
-  }
 
   return (
     <>
@@ -295,28 +217,13 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           {renderJobDetails()}
         </DetailsPane>
 
-        <ReactFlowProvider>
-          <div className="graph-container" style={{ width: '100%', height: '100%' }}>
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onPaneClick={handlePaneClick}
-              onError={onError}
-              nodeTypes={nodeTypes}
-              fitView
-              fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
-              style={{ width: '100%', height: '100%' }}
-              className="react-flow"
-            >
-              <Background />
-              <Controls />
-              <MiniMap />
-            </ReactFlow>
-          </div>
-        </ReactFlowProvider>
+        <LineageGraph
+          lineageGraph={lineageGraph}
+          onNodeClick={handleNodeClick}
+          onPaneClick={handlePaneClick}
+          loading={loading}
+          error={error}
+        />
       </Box>
     </>
   );

@@ -6,7 +6,7 @@ interface DetailsPaneProps {
   open: boolean;
   children: React.ReactNode;
   width?: number;
-  onClose?: () => void;
+  onClose: () => void;
 }
 
 const StyledDetailsPane = styled('div')<{ open: boolean; width: number }>(({ theme, open, width }) => ({
@@ -40,11 +40,9 @@ const DetailsPane = forwardRef<HTMLDivElement, DetailsPaneProps>(
         width={width}
         onClick={(e) => e.stopPropagation()} // Prevent backdrop clicks from bubbling
       >
-        {onClose && (
-          <CloseButton onClick={onClose} size="small">
-            <CloseIcon />
-          </CloseButton>
-        )}
+        <CloseButton onClick={onClose} size="small">
+          <CloseIcon />
+        </CloseButton>
         {children}
       </StyledDetailsPane>
     );
