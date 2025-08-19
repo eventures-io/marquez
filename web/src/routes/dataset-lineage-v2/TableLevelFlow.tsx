@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, styled } from '@mui/material';
+import { Box, styled, Typography, CircularProgress } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -15,6 +15,9 @@ import {
 import useELKLayout from './useELKLayout';
 import { TableLevelActionBar } from './TableLevelActionBar';
 import TableLevelNode from './TableLevelNode';
+import { getJob } from '../../store/requests/jobs';
+import { getJobFacets } from '../../store/requests/facets';
+import { Job, Run } from '../../types/api';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {
@@ -69,6 +72,10 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   const drawerRef = useRef<HTMLDivElement>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
+  const [jobDetails, setJobDetails] = useState<Job | null>(null);
+  const [jobFacets, setJobFacets] = useState<any>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   
   // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -128,7 +135,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           ...node,
           data: {
             ...node.data,
-            onNodeClick: handleNodeClick,
+            onNodeClick: (nodeId: string) => handleNodeClick(nodeId, node.data),
           },
         }));
 
@@ -142,23 +149,125 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
     updateLayout();
   }, [lineageGraph, getLayoutedElements, setNodes, setEdges]);
 
+  // Fetch job details when a job node is selected
+  useEffect(() => {
+    const fetchJobDetails = async () => {
+      if (!selectedNodeData || selectedNodeData.type !== 'JOB') {
+        return;
+      }
+
+      setDetailsLoading(true);
+      try {
+        const job = await getJob(selectedNodeData.job.namespace, selectedNodeData.job.name);
+        setJobDetails(job);
+
+        // If there's a latest run, fetch job facets
+        if (job.latestRun?.id) {
+          const facets = await getJobFacets(job.latestRun.id);
+          setJobFacets(facets);
+        }
+      } catch (error) {
+        console.error('Failed to fetch job details:', error);
+      } finally {
+        setDetailsLoading(false);
+      }
+    };
+
+    fetchJobDetails();
+  }, [selectedNodeData]);
+
   const onConnect = useCallback(
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
 
-  const handleNodeClick = useCallback((nodeId: string) => {
+  const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     setSelectedNodeId(nodeId);
+    setSelectedNodeData(nodeData);
+    setJobDetails(null);
+    setJobFacets(null);
     setIsDrawerOpen(true);
   }, []);
 
   const handlePaneClick = useCallback(() => {
     setIsDrawerOpen(false);
     setSelectedNodeId(null);
+    setSelectedNodeData(null);
+    setJobDetails(null);
+    setJobFacets(null);
   }, []);
 
   const onError = (error: Error) => {
     console.error('ReactFlow error:', error);
+  };
+
+  const renderJobDetails = () => {
+    if (!selectedNodeData) return null;
+
+    if (selectedNodeData.type !== 'JOB') {
+      return (
+        <Box p={2}>
+          <Typography variant="h6">Dataset Details</Typography>
+          <Typography variant="body2">Selected node: {selectedNodeId}</Typography>
+          <Typography variant="body2">Type: {selectedNodeData.type}</Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Box p={2}>
+        <Typography variant="h6" gutterBottom>
+          Job Details
+        </Typography>
+        
+        {detailsLoading ? (
+          <Box display="flex" justifyContent="center" p={2}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : (
+          <>
+            {jobDetails && (
+              <>
+                {(jobDetails.description || jobFacets?.facets?.documentation?.description) && (
+                  <Box mt={1}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Description:
+                    </Typography>
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {jobFacets?.facets?.documentation?.description || jobDetails.description}
+                    </Typography>
+                  </Box>
+                )}
+
+                {jobFacets?.facets?.sql?.query && (
+                  <Box mt={2}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      SQL Query:
+                    </Typography>
+                    <Box 
+                      sx={{ 
+                        backgroundColor: '#f5f5f5', 
+                        p: 1, 
+                        borderRadius: 1,
+                        maxHeight: 300,
+                        overflow: 'auto',
+                        fontFamily: 'monospace',
+                        fontSize: '0.875rem',
+                        whiteSpace: 'pre-wrap',
+                        border: '1px solid #ddd'
+                      }}
+                    >
+                      {jobFacets.facets.sql.query}
+                    </Box>
+                  </Box>
+                )}
+
+              </>
+            )}
+          </>
+        )}
+      </Box>
+    );
   };
 
   if (loading) {
@@ -196,11 +305,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
       >
         {/* Details pane for node details */}
         <DetailsPane ref={drawerRef} open={isDrawerOpen}>
-          <Box p={2}>
-            <h3>Node Details</h3>
-            <p>Selected node: {selectedNodeId}</p>
-            {/* TODO: Add detailed node information */}
-          </Box>
+          {renderJobDetails()}
         </DetailsPane>
 
         <ReactFlowProvider>
