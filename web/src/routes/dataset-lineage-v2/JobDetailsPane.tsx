@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useJobDetails } from './useJobDetails';
 import DatasetDetailsPane from './DatasetDetailsPane';
+import { NodeType } from '../../types/lineage';
 
 interface JobDetailsPaneProps {
   selectedNodeData: any | null;
@@ -16,7 +17,7 @@ const JobDetailsPane: React.FC<JobDetailsPaneProps> = ({
 
   if (!selectedNodeData) return null;
 
-  if (selectedNodeData.type === 'DATASET') {
+  if (selectedNodeData.type === NodeType.DATASET) {
     return (
       <DatasetDetailsPane 
         selectedNodeData={selectedNodeData}
@@ -25,7 +26,7 @@ const JobDetailsPane: React.FC<JobDetailsPaneProps> = ({
     );
   }
 
-  if (selectedNodeData.type !== 'JOB') {
+  if (selectedNodeData.type !== NodeType.JOB) {
     return (
       <Box p={2}>
         <Typography variant="h6">Unknown Node Type</Typography>

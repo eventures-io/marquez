@@ -6,6 +6,7 @@ import { getLineage } from '../../store/requests/lineage'
 import { generateNodeId } from '../../helpers/nodes'
 import { createTableLevelElements } from './tableLevelMapping'
 import TableLevelFlow from './TableLevelFlow'
+import { NodeType } from '../../types/lineage'
 
 const DatasetLineageV2: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
@@ -81,7 +82,7 @@ const DatasetLineageV2: React.FC = () => {
   return (
     <TableLevelFlow 
       lineageGraph={lineageGraph}
-      nodeType="DATASET"
+      nodeType={NodeType.DATASET}
       depth={depth}
       setDepth={setDepth}
       isCompact={isCompact}

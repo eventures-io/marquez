@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress, Chip, Divider } from '@mui/material';
 import { getDataset } from '../../store/requests/datasets';
 import { Dataset } from '../../types/api';
+import { NodeType } from '../../types/lineage';
 
 interface DatasetDetailsPaneProps {
   selectedNodeData: any | null;
@@ -18,7 +19,7 @@ const DatasetDetailsPane: React.FC<DatasetDetailsPaneProps> = ({
   // Fetch dataset details when a dataset node is selected
   useEffect(() => {
     const fetchDatasetDetails = async () => {
-      if (!selectedNodeData || selectedNodeData.type !== 'DATASET') {
+      if (!selectedNodeData || selectedNodeData.type !== NodeType.DATASET) {
         return;
       }
 
@@ -39,7 +40,7 @@ const DatasetDetailsPane: React.FC<DatasetDetailsPaneProps> = ({
     fetchDatasetDetails();
   }, [selectedNodeData]);
 
-  if (!selectedNodeData || selectedNodeData.type !== 'DATASET') {
+  if (!selectedNodeData || selectedNodeData.type !== NodeType.DATASET) {
     return null;
   }
 

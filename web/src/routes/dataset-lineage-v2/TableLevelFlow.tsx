@@ -7,11 +7,12 @@ import DetailsPane from './DetailsPane';
 import LineageGraph from './LineageGraph';
 import JobDetailsPane from './JobDetailsPane';
 import { useDrawerState } from './useDrawerState';
+import { NodeType } from '../../types/lineage';
 import '@xyflow/react/dist/style.css';
 
 interface TableLevelFlowProps {
   lineageGraph: { nodes: any[], edges: any[] } | null;
-  nodeType: 'DATASET' | 'JOB';
+  nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
   isCompact: boolean;

@@ -4,6 +4,11 @@
 import { Field, Run, Tag } from './api'
 import { Nullable } from './util/Nullable'
 
+export enum NodeType {
+  JOB = 'JOB',
+  DATASET = 'DATASET'
+}
+
 export type JobOrDataset = 'JOB' | 'DATASET'
 export type BatchOrStream = 'BATCH' | 'STREAM' | 'SERVICE'
 export type DbTableOrStream = 'DB_TABLE' | 'STREAM'

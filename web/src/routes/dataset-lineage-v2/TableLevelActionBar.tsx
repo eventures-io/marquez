@@ -3,9 +3,10 @@ import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
 import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography, styled } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
+import { NodeType } from '../../types/lineage';
 
 interface TableLevelActionBarProps {
-  nodeType: 'DATASET' | 'JOB';
+  nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
   isCompact: boolean;
@@ -49,11 +50,11 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
         <IconButton
           size="small"
           sx={{ mr: 2 }}
-          onClick={() => navigate(nodeType === 'JOB' ? '/' : '/datasets')}
+          onClick={() => navigate(nodeType === NodeType.JOB ? '/' : '/datasets')}
         >
           <ArrowBackIosRounded fontSize="small" />
         </IconButton>
-        <Typography variant="h6">{nodeType === 'JOB' ? 'Jobs' : 'Datasets'}</Typography>
+        <Typography variant="h6">{nodeType === NodeType.JOB ? 'Jobs' : 'Datasets'}</Typography>
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
           <Typography variant="body2" color="text.secondary">Mode</Typography>

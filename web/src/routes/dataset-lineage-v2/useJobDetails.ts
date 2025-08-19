@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getJob } from '../../store/requests/jobs';
 import { getJobFacets } from '../../store/requests/facets';
 import { Job } from '../../types/api';
+import { NodeType } from '../../types/lineage';
 
 interface UseJobDetailsReturn {
   jobDetails: Job | null;
@@ -17,7 +18,7 @@ export const useJobDetails = (selectedNodeData: any): UseJobDetailsReturn => {
   // Fetch job details when a job node is selected
   useEffect(() => {
     const fetchJobDetails = async () => {
-      if (!selectedNodeData || selectedNodeData.type !== 'JOB') {
+      if (!selectedNodeData || selectedNodeData.type !== NodeType.JOB) {
         return;
       }
 

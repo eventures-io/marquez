@@ -3,11 +3,12 @@ import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Box, Typography, Chip } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
+import { NodeType } from '../../types/lineage';
 
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const isJob = data.type === 'JOB';
-  const isDataset = data.type === 'DATASET';
+  const isJob = data.type === NodeType.JOB;
+  const isDataset = data.type === NodeType.DATASET;
   const isCompact = data.isCompact;
 
   const getNodeStyle = () => {

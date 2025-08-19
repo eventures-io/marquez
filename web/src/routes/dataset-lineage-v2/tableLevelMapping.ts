@@ -1,6 +1,6 @@
 import { Node, Edge } from '@xyflow/react';
 import { LineageGraph } from '../../types/api';
-import { JobOrDataset, LineageDataset, LineageJob, LineageNode } from '../../types/lineage';
+import { JobOrDataset, LineageDataset, LineageJob, LineageNode, NodeType } from '../../types/lineage';
 import { Nullable } from '../../types/util/Nullable';
 
 export interface TableLevelNodeData {
@@ -55,7 +55,7 @@ export const createTableLevelElements = (
     const isNodeCompact = isCompact || collapsedNodesArray.includes(node.id);
     
     
-    if (node.type === 'JOB') {
+    if (node.type === NodeType.JOB) {
       const jobData = node.data as LineageJob;
       const newNode = {
         id: node.id,
@@ -67,14 +67,14 @@ export const createTableLevelElements = (
         },
         data: {
           label: jobData.simpleName || jobData.name,
-          type: 'JOB' as JobOrDataset,
+          type: NodeType.JOB as JobOrDataset,
           job: jobData,
           isCompact: isNodeCompact,
           id: node.id,
         },
       };
       nodes.push(newNode);
-    } else if (node.type === 'DATASET') {
+    } else if (node.type === NodeType.DATASET) {
       const datasetData = node.data as LineageDataset;
       const height = isNodeCompact || collapsedNodesArray.includes(node.id) 
         ? 24 
@@ -91,7 +91,7 @@ export const createTableLevelElements = (
         },
         data: {
           label: datasetData.name,
-          type: 'DATASET' as JobOrDataset,
+          type: NodeType.DATASET as JobOrDataset,
           dataset: datasetData,
           isCompact: isNodeCompact,
           id: node.id,
