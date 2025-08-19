@@ -21,9 +21,10 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
   const nodeStyle = getNodeStyle();
 
   const handleNodeClick = () => {
-    // Set the selected node in search params for drawer
-    searchParams.set('tableLevelNode', data.id || '');
-    setSearchParams(searchParams);
+    // Use the callback from parent component if available
+    if (data.onNodeClick && data.id) {
+      data.onNodeClick(data.id);
+    }
   };
 
   const renderDatasetFields = () => {

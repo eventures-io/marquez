@@ -1,7 +1,7 @@
 // @ts-nocheck
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Drawer, styled } from '@mui/material';
+import { Box, styled } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -37,11 +37,19 @@ interface TableLevelFlow2Props {
 
 const HEADER_HEIGHT = 64 + 1;
 
-const StyledDrawerPaper = styled('div')(({ theme }) => ({
-  backgroundColor: theme.palette.background.default,
-  backgroundImage: 'none',
+const CustomDrawer = styled('div')<{ open: boolean }>(({ theme, open }) => ({
+  position: 'absolute',
+  top: 0,
+  right: 0,
   height: '100%',
   width: 400,
+  backgroundColor: theme.palette.background.default,
+  backgroundImage: 'none',
+  boxShadow: '-2px 0 8px rgba(0,0,0,0.15)',
+  transform: open ? 'translateX(0)' : 'translateX(100%)',
+  transition: 'transform 0.3s ease-in-out',
+  zIndex: 1000,
+  overflow: 'auto',
 }));
 
 const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
@@ -58,11 +66,45 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
   error = null,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
   // ReactFlow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const { getLayoutedElements } = useELKLayout();
+
+  // Handle click outside drawer to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!isDrawerOpen) return;
+      
+      const target = event.target as HTMLElement;
+      
+      // Check if click is inside the drawer
+      if (drawerRef.current && drawerRef.current.contains(target)) {
+        return;
+      }
+      
+      // Check if click is on a ReactFlow node (which should open drawer, not close it)
+      if (target.closest('.react-flow__node')) {
+        return;
+      }
+      
+      // Close drawer for clicks outside
+      setIsDrawerOpen(false);
+      setSelectedNodeId(null);
+    };
+
+    if (isDrawerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDrawerOpen]);
 
   // Update layout when lineage graph changes
   useEffect(() => {
@@ -81,7 +123,16 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
           window.innerHeight - HEADER_HEIGHT * 2 - 100 // Adjust for action bar
         );
 
-        setNodes(layoutedNodes);
+        // Add click handler to node data
+        const nodesWithClickHandler = layoutedNodes.map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            onNodeClick: handleNodeClick,
+          },
+        }));
+
+        setNodes(nodesWithClickHandler);
         setEdges(layoutedEdges);
       } catch (error) {
         console.error('Error processing lineage data:', error);
@@ -95,6 +146,16 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
     (params) => setEdges((eds) => addEdge(params, eds)),
     [setEdges]
   );
+
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setSelectedNodeId(nodeId);
+    setIsDrawerOpen(true);
+  }, []);
+
+  const handlePaneClick = useCallback(() => {
+    setIsDrawerOpen(false);
+    setSelectedNodeId(null);
+  }, []);
 
   const onError = (error: Error) => {
     console.error('ReactFlow error:', error);
@@ -133,36 +194,14 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
         height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
-        {/* Drawer for node details */}
-        <Drawer
-          anchor="right"
-          open={!!searchParams.get('tableLevelNode')}
-          onClose={() => {
-            const newParams = new URLSearchParams(searchParams);
-            newParams.delete('tableLevelNode');
-            setSearchParams(newParams);
-          }}
-          variant="persistent"
-          ModalProps={{
-            container: () => document.querySelector('.graph-container'),
-            style: { position: 'absolute' },
-          }}
-          PaperProps={{
-            component: StyledDrawerPaper,
-            sx: {
-              position: 'absolute',
-              right: 0,
-              top: 0,
-              height: '100%',
-            },
-          }}
-        >
+        {/* Custom drawer for node details */}
+        <CustomDrawer ref={drawerRef} open={isDrawerOpen}>
           <Box p={2}>
             <h3>Node Details</h3>
-            <p>Selected node: {searchParams.get('tableLevelNode')}</p>
+            <p>Selected node: {selectedNodeId}</p>
             {/* TODO: Add detailed node information */}
           </Box>
-        </Drawer>
+        </CustomDrawer>
 
         <ReactFlowProvider>
           <div className="graph-container" style={{ width: '100%', height: '100%' }}>
@@ -172,6 +211,7 @@ const TableLevelFlow2: React.FC<TableLevelFlow2Props> = ({
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
+              onPaneClick={handlePaneClick}
               onError={onError}
               nodeTypes={nodeTypes}
               fitView
