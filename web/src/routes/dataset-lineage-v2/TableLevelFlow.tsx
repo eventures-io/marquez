@@ -1,15 +1,13 @@
 // @ts-nocheck
-import React, { useEffect, useCallback, useRef, useState } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { TableLevelActionBar } from './TableLevelActionBar';
-import { getJob } from '../../store/requests/jobs';
-import { getJobFacets } from '../../store/requests/facets';
-import { Job, Run } from '../../types/api';
 import DetailsPane from './DetailsPane';
 import LineageGraph from './LineageGraph';
+import { useJobDetails } from './useJobDetails';
+import { useDrawerState } from './useDrawerState';
 import '@xyflow/react/dist/style.css';
-
 
 interface TableLevelFlowProps {
   lineageGraph: { nodes: any[], edges: any[] } | null;
@@ -27,7 +25,6 @@ interface TableLevelFlowProps {
 
 const HEADER_HEIGHT = 64 + 1;
 
-
 const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   lineageGraph,
   nodeType,
@@ -42,88 +39,10 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   error = null,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const drawerRef = useRef<HTMLDivElement>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedNodeData, setSelectedNodeData] = useState<any>(null);
-  const [jobDetails, setJobDetails] = useState<Job | null>(null);
-  const [jobFacets, setJobFacets] = useState<any>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-
-  // Handle click outside drawer to close it
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!isDrawerOpen) return;
-      
-      const target = event.target as HTMLElement;
-      
-      // Check if click is inside the drawer
-      if (drawerRef.current && drawerRef.current.contains(target)) {
-        return;
-      }
-      
-      // Check if click is on a ReactFlow node (which should open drawer, not close it)
-      if (target.closest('.react-flow__node')) {
-        return;
-      }
-      
-      // Close drawer for clicks outside
-      setIsDrawerOpen(false);
-      setSelectedNodeId(null);
-    };
-
-    if (isDrawerOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isDrawerOpen]);
-
-
-  // Fetch job details when a job node is selected
-  useEffect(() => {
-    const fetchJobDetails = async () => {
-      if (!selectedNodeData || selectedNodeData.type !== 'JOB') {
-        return;
-      }
-
-      setDetailsLoading(true);
-      try {
-        const job = await getJob(selectedNodeData.job.namespace, selectedNodeData.job.name);
-        setJobDetails(job);
-
-        // If there's a latest run, fetch job facets
-        if (job.latestRun?.id) {
-          const facets = await getJobFacets(job.latestRun.id);
-          setJobFacets(facets);
-        }
-      } catch (error) {
-        console.error('Failed to fetch job details:', error);
-      } finally {
-        setDetailsLoading(false);
-      }
-    };
-
-    fetchJobDetails();
-  }, [selectedNodeData]);
-
-  const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
-    setSelectedNodeId(nodeId);
-    setSelectedNodeData(nodeData);
-    setJobDetails(null);
-    setJobFacets(null);
-    setIsDrawerOpen(true);
-  }, []);
-
-  const handlePaneClick = useCallback(() => {
-    setIsDrawerOpen(false);
-    setSelectedNodeId(null);
-    setSelectedNodeData(null);
-    setJobDetails(null);
-    setJobFacets(null);
-  }, []);
+  
+  // Custom hooks
+  const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
+  const { jobDetails, jobFacets, detailsLoading } = useJobDetails(selectedNodeData);
 
   const renderJobDetails = () => {
     if (!selectedNodeData) return null;
@@ -193,7 +112,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
       </Box>
     );
   };
-
 
   return (
     <>

@@ -1,18 +1,15 @@
 // @ts-nocheck
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
 import {
   ReactFlow,
   Background,
-  useNodesState,
-  useEdgesState,
   ReactFlowProvider,
-  addEdge,
   Controls,
   MiniMap,
 } from '@xyflow/react';
-import useELKLayout from './useELKLayout';
 import TableLevelNode from './TableLevelNode';
+import { useLineageLayout } from './useLineageLayout';
 
 const nodeTypes = {
   tableLevel: TableLevelNode,
@@ -35,51 +32,15 @@ const LineageGraph: React.FC<LineageGraphProps> = ({
   loading = false,
   error = null,
 }) => {
-  // ReactFlow state
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  const { getLayoutedElements } = useELKLayout();
+  // Calculate available height for layout
+  const availableHeight = window.innerHeight - HEADER_HEIGHT * 2 - 100; // Adjust for action bar
 
-  // Update layout when lineage graph changes
-  useEffect(() => {
-    const updateLayout = async () => {
-      if (!lineageGraph || !lineageGraph.nodes || lineageGraph.nodes.length === 0) {
-        setNodes([]);
-        setEdges([]);
-        return;
-      }
-
-      try {
-        // Apply ELK layout to the pre-mapped nodes and edges
-        const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
-          lineageGraph.nodes,
-          lineageGraph.edges,
-          window.innerHeight - HEADER_HEIGHT * 2 - 100 // Adjust for action bar
-        );
-
-        // Add click handler to node data
-        const nodesWithClickHandler = layoutedNodes.map(node => ({
-          ...node,
-          data: {
-            ...node.data,
-            onNodeClick: (nodeId: string) => onNodeClick(nodeId, node.data),
-          },
-        }));
-
-        setNodes(nodesWithClickHandler);
-        setEdges(layoutedEdges);
-      } catch (error) {
-        console.error('Error processing lineage data:', error);
-      }
-    };
-
-    updateLayout();
-  }, [lineageGraph, getLayoutedElements, setNodes, setEdges, onNodeClick]);
-
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
+  // Use custom hook for layout and ReactFlow state
+  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useLineageLayout({
+    lineageGraph,
+    onNodeClick,
+    availableHeight,
+  });
 
   const onError = (error: Error) => {
     console.error('ReactFlow error:', error);
