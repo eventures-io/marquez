@@ -61,7 +61,10 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.json'],
-    symlinks: false
+    symlinks: false,
+    alias: {
+      '@app-types': path.resolve(__dirname, 'src/routes/dataset-lineage-v2/types')
+    }
   },
   output: {
     filename: 'bundle.js',

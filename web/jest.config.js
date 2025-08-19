@@ -27,6 +27,7 @@ module.exports = {
       '<rootDir>/__tests__/__mocks__/fileMock.js',
     '\\.(css|less)$': 'identity-obj-proxy',
     "d3": "<rootDir>/node_modules/d3/dist/d3.min.js",
-    "^d3-(.*)$": "<rootDir>/node_modules/d3-$1/dist/d3-$1.min.js"
+    "^d3-(.*)$": "<rootDir>/node_modules/d3-$1/dist/d3-$1.min.js",
+    "^@app-types$": "<rootDir>/src/routes/dataset-lineage-v2/types"
   }
 }

@@ -7,7 +7,7 @@ import DetailsPane from './DetailsPane';
 import LineageGraph from './LineageGraph';
 import JobDetailsPane from './JobDetailsPane';
 import { useDrawerState } from './useDrawerState';
-import { NodeType } from '../../types/lineage';
+import { NodeType } from '@app-types';
 import '@xyflow/react/dist/style.css';
 
 interface TableLevelFlowProps {

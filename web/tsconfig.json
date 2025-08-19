@@ -13,7 +13,11 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "downlevelIteration": true,
-    "resolveJsonModule": false
+    "resolveJsonModule": false,
+    "baseUrl": ".",
+    "paths": {
+      "@app-types": ["src/routes/dataset-lineage-v2/types"]
+    }
   },
   "include": [
     "./src/**/*",

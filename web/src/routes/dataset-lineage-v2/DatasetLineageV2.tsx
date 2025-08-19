@@ -1,12 +1,11 @@
 // @ts-nocheck
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { LineageGraph } from '../../types/api'
+import { LineageGraph, NodeType } from '@app-types'
 import { getLineage } from '../../store/requests/lineage'
 import { generateNodeId } from '../../helpers/nodes'
 import { createTableLevelElements } from './tableLevelMapping'
 import TableLevelFlow from './TableLevelFlow'
-import { NodeType } from '../../types/lineage'
 
 const DatasetLineageV2: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()

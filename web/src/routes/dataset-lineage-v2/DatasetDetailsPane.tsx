@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, CircularProgress, Chip, Divider } from '@mui/material';
 import { getDataset } from '../../store/requests/datasets';
-import { Dataset } from '../../types/api';
-import { NodeType } from '../../types/lineage';
+import { Dataset, NodeType } from '@app-types';
 
 interface DatasetDetailsPaneProps {
   selectedNodeData: any | null;

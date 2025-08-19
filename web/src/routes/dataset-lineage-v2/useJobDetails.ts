@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getJob } from '../../store/requests/jobs';
 import { getJobFacets } from '../../store/requests/facets';
-import { Job } from '../../types/api';
-import { NodeType } from '../../types/lineage';
+import { Job, NodeType } from '@app-types';
 
 interface UseJobDetailsReturn {
   jobDetails: Job | null;

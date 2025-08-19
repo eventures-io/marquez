@@ -1,0 +1,63 @@
+// Copyright 2018-2023 contributors to the Marquez project
+// SPDX-License-Identifier: Apache-2.0
+
+import type { Field, Run, Tag } from './api'
+import type { Nullable } from './Nullable'
+
+export enum NodeType {
+  JOB = 'JOB',
+  DATASET = 'DATASET'
+}
+
+export type BatchOrStream = 'BATCH' | 'STREAM' | 'SERVICE'
+export type DbTableOrStream = 'DB_TABLE' | 'STREAM'
+
+export interface LineageDataset {
+  id: { namespace: string; name: string }
+  type: DbTableOrStream
+  name: string
+  physicalName: string
+  createdAt: string
+  updatedAt: string
+  namespace: string
+  sourceName: string
+  fields: Field[]
+  facets: object
+  tags: Tag[]
+  lastModifiedAt: string
+  description: string
+}
+
+export interface LineageJob {
+  id: { namespace: string; name: string }
+  type: BatchOrStream
+  name: string
+  createdAt: string
+  updatedAt: string
+  namespace: string
+  inputs: { namespace: string; name: string }[]
+  outputs: { namespace: string; name: string }[]
+  location: string
+  description: string
+  simpleName: string
+  latestRun: Nullable<Run>
+  parentJobName: Nullable<string>
+  parentJobUuid: Nullable<string>
+}
+
+export interface LineageEdge {
+  origin: string
+  destination: string
+}
+
+export interface LineageNode {
+  id: string
+  type: NodeType
+  data: LineageDataset | LineageJob
+  inEdges: LineageEdge[]
+  outEdges: LineageEdge[]
+}
+
+export interface MqNode {
+  data: LineageDataset | LineageJob
+}

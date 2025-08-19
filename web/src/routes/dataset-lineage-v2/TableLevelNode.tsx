@@ -3,7 +3,7 @@ import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Box, Typography, Chip } from '@mui/material';
 import { useSearchParams } from 'react-router-dom';
-import { NodeType } from '../../types/lineage';
+import { NodeType } from '@app-types';
 
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {
   const [searchParams, setSearchParams] = useSearchParams();

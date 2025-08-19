@@ -1,11 +1,9 @@
 import { Node, Edge } from '@xyflow/react';
-import { LineageGraph } from '../../types/api';
-import { JobOrDataset, LineageDataset, LineageJob, LineageNode, NodeType } from '../../types/lineage';
-import { Nullable } from '../../types/util/Nullable';
+import { LineageGraph, LineageDataset, LineageJob, LineageNode, NodeType, Nullable } from '@app-types';
 
 export interface TableLevelNodeData {
   label: string;
-  type: JobOrDataset;
+  type: NodeType;
   dataset?: LineageDataset;
   job?: LineageJob;
   isCompact?: boolean;
@@ -67,7 +65,7 @@ export const createTableLevelElements = (
         },
         data: {
           label: jobData.simpleName || jobData.name,
-          type: NodeType.JOB as JobOrDataset,
+          type: NodeType.JOB,
           job: jobData,
           isCompact: isNodeCompact,
           id: node.id,
@@ -91,7 +89,7 @@ export const createTableLevelElements = (
         },
         data: {
           label: datasetData.name,
-          type: NodeType.DATASET as JobOrDataset,
+          type: NodeType.DATASET,
           dataset: datasetData,
           isCompact: isNodeCompact,
           id: node.id,

@@ -3,7 +3,7 @@ import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
 import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography, styled } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { NodeType } from '../../types/lineage';
+import { NodeType } from '@app-types';
 
 interface TableLevelActionBarProps {
   nodeType: NodeType;

@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
 import { useJobDetails } from './useJobDetails';
 import DatasetDetailsPane from './DatasetDetailsPane';
-import { NodeType } from '../../types/lineage';
+import { NodeType } from '@app-types';
 
 interface JobDetailsPaneProps {
   selectedNodeData: any | null;
