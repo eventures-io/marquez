@@ -1,11 +1,11 @@
 // @ts-nocheck
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Box, Typography, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
 import { TableLevelActionBar } from './TableLevelActionBar';
 import DetailsPane from './DetailsPane';
 import LineageGraph from './LineageGraph';
-import { useJobDetails } from './useJobDetails';
+import JobDetailsPane from './JobDetailsPane';
 import { useDrawerState } from './useDrawerState';
 import '@xyflow/react/dist/style.css';
 
@@ -42,76 +42,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   
   // Custom hooks
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
-  const { jobDetails, jobFacets, detailsLoading } = useJobDetails(selectedNodeData);
 
-  const renderJobDetails = () => {
-    if (!selectedNodeData) return null;
-
-    if (selectedNodeData.type !== 'JOB') {
-      return (
-        <Box p={2}>
-          <Typography variant="h6">Dataset Details</Typography>
-          <Typography variant="body2">Selected node: {selectedNodeId}</Typography>
-          <Typography variant="body2">Type: {selectedNodeData.type}</Typography>
-        </Box>
-      );
-    }
-
-    return (
-      <Box p={2}>
-        <Typography variant="h6" gutterBottom>
-          Job Details
-        </Typography>
-        
-        {detailsLoading ? (
-          <Box display="flex" justifyContent="center" p={2}>
-            <CircularProgress size={24} />
-          </Box>
-        ) : (
-          <>
-            {jobDetails && (
-              <>
-                {(jobDetails.description || jobFacets?.facets?.documentation?.description) && (
-                  <Box mt={1}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Description:
-                    </Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {jobFacets?.facets?.documentation?.description || jobDetails.description}
-                    </Typography>
-                  </Box>
-                )}
-
-                {jobFacets?.facets?.sql?.query && (
-                  <Box mt={2}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      SQL Query:
-                    </Typography>
-                    <Box 
-                      sx={{ 
-                        backgroundColor: '#f5f5f5', 
-                        p: 1, 
-                        borderRadius: 1,
-                        maxHeight: 300,
-                        overflow: 'auto',
-                        fontFamily: 'monospace',
-                        fontSize: '0.875rem',
-                        whiteSpace: 'pre-wrap',
-                        border: '1px solid #ddd'
-                      }}
-                    >
-                      {jobFacets.facets.sql.query}
-                    </Box>
-                  </Box>
-                )}
-
-              </>
-            )}
-          </>
-        )}
-      </Box>
-    );
-  };
 
   return (
     <>
@@ -132,7 +63,10 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
       >
         {/* Details pane for node details */}
         <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
-          {renderJobDetails()}
+          <JobDetailsPane 
+            selectedNodeData={selectedNodeData}
+            selectedNodeId={selectedNodeId}
+          />
         </DetailsPane>
 
         <LineageGraph
