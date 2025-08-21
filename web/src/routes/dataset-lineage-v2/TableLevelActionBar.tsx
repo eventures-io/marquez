@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
 import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography, styled } from '@mui/material';

@@ -1,15 +1,22 @@
-// @ts-nocheck
 import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { Box, Typography, Chip } from '@mui/material';
-import { useSearchParams } from 'react-router-dom';
-import { NodeType } from '@app-types';
+import { NodeType, LineageDataset, LineageJob } from '@app-types';
+
+interface TableLevelNodeData {
+  id: string;
+  label: string;
+  type: NodeType;
+  dataset?: LineageDataset;
+  job?: LineageJob;
+  isCompact?: boolean;
+  onNodeClick?: (id: string) => void;
+}
 
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const isJob = data.type === NodeType.JOB;
-  const isDataset = data.type === NodeType.DATASET;
-  const isCompact = data.isCompact;
+  const nodeData = data as unknown as TableLevelNodeData;
+  const isJob = nodeData.type === NodeType.JOB;
+  const isCompact = nodeData.isCompact;
 
   const getNodeStyle = () => {
     return {
@@ -23,17 +30,17 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
 
   const handleNodeClick = () => {
     // Use the callback from parent component if available
-    if (data.onNodeClick && data.id) {
-      data.onNodeClick(data.id);
+    if (nodeData.onNodeClick && nodeData.id) {
+      nodeData.onNodeClick(nodeData.id);
     }
   };
 
   const renderDatasetFields = () => {
-    if (isCompact || !data.dataset?.fields) return null;
+    if (isCompact || !nodeData.dataset?.fields) return null;
     
     return (
       <Box sx={{ mt: 1, maxHeight: '100px', overflow: 'auto' }}>
-        {data.dataset.fields.slice(0, 5).map((field, index) => (
+        {nodeData.dataset.fields.slice(0, 5).map((field: { name: string; type: string | null }, index: number) => (
           <Box
             key={index}
             sx={{
@@ -56,9 +63,9 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
             </Typography> */}
           </Box>
         ))}
-        {data.dataset.fields.length > 5 && (
+        {nodeData.dataset.fields.length > 5 && (
           <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.6, textAlign: 'center' }}>
-            +{data.dataset.fields.length - 5} more fields
+            +{nodeData.dataset.fields.length - 5} more fields
           </Typography>
         )}
       </Box>
@@ -131,18 +138,18 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
           lineHeight: 1.2,
         }}
       >
-        {data.label}
+        {nodeData.label}
       </Typography>
 
-      {!isCompact && data.dataset && (
+      {!isCompact && nodeData.dataset && (
         <Typography variant="caption" sx={{ fontSize: '9px', opacity: 0.7, mt: 0.5 }}>
-          {data.dataset.namespace}
+          {nodeData.dataset.namespace}
         </Typography>
       )}
 
-      {!isCompact && data.dataset?.tags && data.dataset.tags.length > 0 && (
+      {!isCompact && nodeData.dataset?.tags && nodeData.dataset.tags.length > 0 && (
         <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
-          {data.dataset.tags.slice(0, 2).map((tag, index) => (
+          {nodeData.dataset.tags.slice(0, 2).map((tag: { name: string }, index: number) => (
             <Chip
               key={index}
               label={tag.name}

@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "marquez.fullname" . }}-config
+  labels:
+    {{- include "marquez.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {
+      "api": {
+        "host": "{{ .Values.api.host }}",
+        "port": {{ .Values.api.port }}
+      },
+      "database": {
+        "host": "{{ .Values.database.host }}",
+        "port": {{ .Values.database.port }},
+        "name": "{{ .Values.database.name }}"
+      },
+      "vault": {
+        "enabled": {{ .Values.vault.enabled }},
+        "address": "{{ .Values.vault.address }}"
+      }
+    }
+  nginx.conf: |
+    server {
+        listen {{ .Values.service.targetPort }};
+        server_name localhost;
+        
+        location / {
+            root /usr/share/nginx/html;
+            index index.html index.htm;
+            try_files $uri $uri/ /index.html;
+        }
+        
+        location /api/ {
+            proxy_pass http://{{ .Values.api.host }}:{{ .Values.api.port }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+        
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {
+            root /usr/share/nginx/html;
+        }
+    }

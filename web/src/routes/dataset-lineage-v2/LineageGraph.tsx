@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React from 'react';
 import { Box } from '@mui/material';
 import {
@@ -72,7 +71,7 @@ const LineageGraph: React.FC<LineageGraphProps> = ({
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onPaneClick={onPaneClick}
-          onError={onError}
+          // onError={onError}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useCallback } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Node, Edge } from '@xyflow/react';
@@ -25,7 +24,7 @@ const ensureMinimumVerticalSpacing = (nodes: Node[], minSpacing: number): Node[]
     for (let i = 1; i < columnNodes.length; i++) {
       const prevNode = columnNodes[i - 1];
       const currentNode = columnNodes[i];
-      const prevNodeHeight = prevNode.style?.height || 40;
+      const prevNodeHeight = typeof prevNode.style?.height === 'number' ? prevNode.style.height : 40;
       const minY = prevNode.position.y + prevNodeHeight + minSpacing;
       
       if (currentNode.position.y < minY) {
@@ -55,13 +54,13 @@ const layoutOptions = {
 };
 
 const useELKLayout = () => {
-  const getLayoutedElements = useCallback(async (nodes: Node[], edges: Edge[], containerHeight: number = 600) => {
+  const getLayoutedElements = useCallback(async (nodes: Node[], edges: Edge[]) => {
     const graph = {
       id: 'root',
       layoutOptions: layoutOptions,
       children: nodes.map((node) => {
-        const width = node.style?.width || 150;
-        const height = node.style?.height || 40;
+        const width = typeof node.style?.width === 'number' ? node.style.width : 150;
+        const height = typeof node.style?.height === 'number' ? node.style.height : 40;
         return {
           id: node.id,
           width,
@@ -100,9 +99,9 @@ const useELKLayout = () => {
           width: layoutedGraph.width || 0,
           height: layoutedGraph.height || 0,
           minX: Math.min(...layoutedNodes.map(n => n.position.x)),
-          maxX: Math.max(...layoutedNodes.map(n => n.position.x + (n.style?.width || 150))),
+          maxX: Math.max(...layoutedNodes.map(n => n.position.x + (typeof n.style?.width === 'number' ? n.style.width : 150))),
           minY: Math.min(...layoutedNodes.map(n => n.position.y)),
-          maxY: Math.max(...layoutedNodes.map(n => n.position.y + (n.style?.height || 40))),
+          maxY: Math.max(...layoutedNodes.map(n => n.position.y + (typeof n.style?.height === 'number' ? n.style.height : 40))),
         };
         
         

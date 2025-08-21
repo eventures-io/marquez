@@ -1,0 +1,18 @@
+apiVersion: v2
+name: marquez
+description: A Helm chart for Marquez data lineage platform with Vault integration
+type: application
+version: 0.1.0
+appVersion: "latest"
+dependencies: []
+keywords:
+  - data-lineage
+  - metadata
+  - observability
+  - vault
+home: https://marquezproject.github.io/marquez/
+sources:
+  - https://github.com/MarquezProject/marquez
+maintainers:
+  - name: Marquez Team
+    email: marquez@example.com

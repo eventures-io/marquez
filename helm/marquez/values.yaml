@@ -1,0 +1,84 @@
+# Default values for marquez
+replicaCount: 1
+
+image:
+  repository: marquezproject/marquez-web
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+nameOverride: ""
+fullnameOverride: ""
+
+# Vault configuration
+vault:
+  enabled: true
+  address: "https://vault.vault.svc.cluster.local:8200"
+  authPath: "auth/kubernetes"
+  role: "marquez-db"
+  secretPath: "database/creds/marquez-role"
+  # ServiceAccount for Kubernetes auth
+  serviceAccount: marquez-vault
+  # Vault Agent image configuration
+  agentImage:
+    repository: "your-registry.com/hashicorp/vault"
+    tag: "1.15.2"
+  
+# Database configuration
+database:
+  # These will be populated by Vault agent
+  host: "postgres.default.svc.cluster.local"
+  port: 5432
+  name: "marquez"
+  # Dynamic credentials from Vault
+  credentialsPath: "/vault/secrets/db-creds"
+
+# Marquez API configuration
+api:
+  port: 5000
+  host: "marquez-api.default.svc.cluster.local"
+
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: marquez.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+podSecurityContext:
+  fsGroup: 1000

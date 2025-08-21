@@ -1,0 +1,106 @@
+# Production values for marquez
+replicaCount: 3
+
+image:
+  repository: marquezproject/marquez-web
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"  # Use specific version in production
+
+# Vault configuration for production
+vault:
+  enabled: true
+  address: "https://vault.vault.svc.cluster.local:8200"
+  authPath: "auth/kubernetes"
+  role: "marquez-db-prod"
+  secretPath: "database/creds/marquez-role-prod"
+  serviceAccount: marquez-vault-prod
+  # Production Vault Agent image
+  agentImage:
+    repository: "your-registry.com/hashicorp/vault"
+    tag: "1.15.2"
+
+# Production database
+database:
+  host: "postgres-primary.database.svc.cluster.local"
+  port: 5432
+  name: "marquez_prod"
+  credentialsPath: "/vault/secrets/db-creds"
+
+# Production API
+api:
+  port: 5000
+  host: "marquez-api.marquez.svc.cluster.local"
+
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+
+# Enable ingress for production
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: marquez.company.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: marquez-tls
+      hosts:
+        - marquez.company.com
+
+# Production resource limits
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 512Mi
+
+# Enable autoscaling in production
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Production node affinity
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+    - weight: 100
+      podAffinityTerm:
+        labelSelector:
+          matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values:
+            - marquez
+        topologyKey: kubernetes.io/hostname
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault

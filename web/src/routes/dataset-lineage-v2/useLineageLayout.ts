@@ -40,8 +40,7 @@ export const useLineageLayout = ({
         // Apply ELK layout to the pre-mapped nodes and edges
         const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
           lineageGraph.nodes,
-          lineageGraph.edges,
-          availableHeight
+          lineageGraph.edges
         );
 
         // Add click handler to node data
