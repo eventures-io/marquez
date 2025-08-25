@@ -55,7 +55,7 @@ export const useLineageData = () => {
     const nodes: Node[] = Array.from(lineageData.nodes.entries()).map(([id, data]) => ({
       id,
       type: 'tableLevel',
-      position: nodePositions.get(id) || { x: 250, y: 100 },
+      position: nodePositions.get(id) || { x: 50, y: 300 },
       data: {
         ...data,
         onNodeClick: (nodeId: string) => handleNodeClick(nodeId, data),
@@ -97,7 +97,7 @@ export const useLineageData = () => {
       };
 
       updateNode('dataset-1', initialDatasetData);
-      updateNodePosition('dataset-1', { x: 250, y: 100 });
+      updateNodePosition('dataset-1', { x: 50, y: 300 });
     }
     return toReactFlowFormat(handleNodeClick);
   }, [lineageData.nodes.size, updateNode, updateNodePosition, toReactFlowFormat]);

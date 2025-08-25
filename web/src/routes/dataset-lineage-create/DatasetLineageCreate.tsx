@@ -37,7 +37,7 @@ const createInitialNodes = (): Node[] => [
   {
     id: 'dataset-1',
     type: 'tableLevel',
-    position: { x: 250, y: 100 },
+    position: { x: 50, y: 300 },
     data: {
       id: 'dataset-1',
       label: 'Initial Dataset',
@@ -67,11 +67,12 @@ const DatasetLineageCreateFlow: React.FC = () => {
   const { screenToFlowPosition } = useReactFlow();
   
   // Drawer state
-  const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
+  const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick, updateSelectedNodeData } = useDrawerState();
   
   // Lineage data management
   const {
     updateNode,
+    updateNodePosition,
     addEdge: addLineageEdge,
     getNode,
     toReactFlowFormat,
@@ -110,6 +111,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         type: nodeData.type,
         dataset: nodeData.dataset
       });
+      updateNodePosition(initialNode.id, { x: 50, y: 300 });
     }
   }, []); // Empty dependency array - only run once
 
@@ -120,18 +122,35 @@ const DatasetLineageCreateFlow: React.FC = () => {
       // When a connection is dropped on the pane it's not valid
       if (!connectionState.isValid) {
         const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
-        const position = screenToFlowPosition({ x: clientX, y: clientY });
+        const dropPosition = screenToFlowPosition({ x: clientX, y: clientY });
         
         // Find the source node from ReactFlow nodes to determine what type to create
         const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
         const sourceNodeType = sourceNode?.data?.type;
         
-        console.log('Source node:', sourceNode, 'Type:', sourceNodeType);
+        // Adjust position to center the node based on type
+        const nodeWidth = 180; // Consistent width for both types
+        
+        // Different heights for different node types
+        let nodeHeight;
+        if (sourceNodeType === NodeType.DATASET) {
+          // Creating job node - jobs are typically shorter
+          nodeHeight = 75; // Job nodes are more compact
+        } else {
+          // Creating dataset node - datasets can be taller with fields
+          nodeHeight = 95; // Dataset nodes have more content
+        }
+        
+        const position = {
+          x: dropPosition.x - nodeWidth / 2,
+          y: dropPosition.y - nodeHeight / 2
+        };
+        
+        console.log('Drop position:', dropPosition, 'Node type creating:', sourceNodeType === NodeType.DATASET ? 'JOB' : 'DATASET', 'Height:', nodeHeight, 'Centered position:', position);
         
         if (sourceNodeType === NodeType.DATASET) {
           // If source is dataset, create job node
           const id = getJobId();
-          console.log('Creating job node:', id, 'at position:', position);
           
           // Create new job node
           const newJobNode = {
@@ -200,7 +219,6 @@ const DatasetLineageCreateFlow: React.FC = () => {
         } else if (sourceNodeType === NodeType.JOB) {
           // If source is job, create dataset node
           const id = getDatasetId();
-          console.log('Creating dataset node:', id, 'at position:', position);
           
           // Create new dataset node
           const newDatasetNode = {
@@ -278,8 +296,9 @@ const DatasetLineageCreateFlow: React.FC = () => {
       {/* Details pane for editing node details */}
       <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
         <EditForm 
-          selectedNodeData={selectedNodeData}
+          selectedNodeData={selectedNodeId ? getNode(selectedNodeId) || selectedNodeData : selectedNodeData}
           selectedNodeId={selectedNodeId}
+          onClose={handlePaneClick}
           onUpdate={(updatedData: any) => {
             if (selectedNodeId && updatedData) {
               // Update the lineage data
@@ -313,8 +332,6 @@ const DatasetLineageCreateFlow: React.FC = () => {
           onConnectEnd={onConnectEnd}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
           style={{ width: '100%', height: '100%' }}
           className="react-flow"
         >

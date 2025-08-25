@@ -20,6 +20,7 @@ interface EditFormProps {
   selectedNodeData: any;
   selectedNodeId: string | null;
   onUpdate: (updatedData: any) => void;
+  onClose?: () => void;
 }
 
 interface FormData {
@@ -36,6 +37,7 @@ const EditForm: React.FC<EditFormProps> = ({
   selectedNodeData,
   selectedNodeId,
   onUpdate,
+  onClose,
 }) => {
   const [formData, setFormData] = useState<FormData>({
     label: '',
@@ -111,6 +113,11 @@ const EditForm: React.FC<EditFormProps> = ({
     };
     
     onUpdate(updatedData);
+    
+    // Close the drawer after saving
+    if (onClose) {
+      onClose();
+    }
   };
 
   if (!selectedNodeData || !selectedNodeId) {
@@ -170,18 +177,14 @@ const EditForm: React.FC<EditFormProps> = ({
           label="Type"
           onChange={(e) => handleInputChange('type', e.target.value)}
         >
-          {isDataset ? (
-            <>
-              <MenuItem value="DB_TABLE">DB Table</MenuItem>
-              <MenuItem value="STREAM">Stream</MenuItem>
-            </>
-          ) : (
-            <>
-              <MenuItem value="BATCH">Batch</MenuItem>
-              <MenuItem value="STREAM">Stream</MenuItem>
-              <MenuItem value="SERVICE">Service</MenuItem>
-            </>
-          )}
+          {isDataset ? [
+            <MenuItem key="DB_TABLE" value="DB_TABLE">DB Table</MenuItem>,
+            <MenuItem key="STREAM" value="STREAM">Stream</MenuItem>
+          ] : [
+            <MenuItem key="BATCH" value="BATCH">Batch</MenuItem>,
+            <MenuItem key="STREAM" value="STREAM">Stream</MenuItem>,
+            <MenuItem key="SERVICE" value="SERVICE">Service</MenuItem>
+          ]}
         </Select>
       </FormControl>
 
