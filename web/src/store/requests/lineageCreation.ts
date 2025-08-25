@@ -184,31 +184,25 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
         runId: runId,
         facets: {}
       },
-      inputs: inputs.map(dataset => {
-        console.log(`OpenLineage input dataset ${dataset.dataset!.name} fields:`, dataset.dataset!.fields);
-        return {
-          namespace: lineageNamespace,
-          name: dataset.dataset!.name,
-          facets: {
-            schema: {
-              _producer: 'https://github.com/MarquezProject/marquez-ui',
-              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json',
-              fields: (dataset.dataset!.fields || []).map((field, index) => {
-                console.log(`OpenLineage input field ${index}:`, field);
-                return {
-                  name: field.name,
-                  type: field.type || 'unknown'
-                };
-              })
-            },
-            documentation: {
-              _producer: 'https://github.com/MarquezProject/marquez-ui',
-              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationDatasetFacet.json',
-              description: dataset.dataset!.description || `${dataset.dataset?.name || 'Dataset'} dataset`
-            }
+      inputs: inputs.map(dataset => ({
+        namespace: lineageNamespace,
+        name: dataset.dataset!.name,
+        facets: {
+          schema: {
+            _producer: 'https://github.com/MarquezProject/marquez-ui',
+            _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json',
+            fields: (dataset.dataset!.fields || []).map(field => ({
+              name: field.name,
+              type: field.type || 'unknown'
+            }))
+          },
+          documentation: {
+            _producer: 'https://github.com/MarquezProject/marquez-ui',
+            _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationDatasetFacet.json',
+            description: dataset.dataset!.description || `${dataset.dataset?.name || 'Dataset'} dataset`
           }
-        };
-      }),
+        }
+      })),
       outputs: outputs.map(dataset => ({
         namespace: lineageNamespace,
         name: dataset.dataset!.name,

@@ -98,7 +98,6 @@ const EditForm: React.FC<EditFormProps> = ({
 
   const handleSave = () => {
     // Basic validation
-    
     if (isInitialDataset && !formData.namespace.trim()) {
       alert('Please provide a namespace for the lineage.');
       return;
@@ -111,7 +110,11 @@ const EditForm: React.FC<EditFormProps> = ({
     
     const isDataset = selectedNodeData.type === NodeType.DATASET;
     
-    console.log('EditForm handleSave - formData.fields:', formData.fields);
+    // If there's a field being typed but not yet added, include it
+    let fieldsToSave = [...(formData.fields || [])];
+    if (isDataset && newField.name.trim() && newField.type.trim()) {
+      fieldsToSave.push({ name: newField.name.trim(), type: newField.type.trim() });
+    }
     
     const updatedData = {
       label: formData.name || 'Unnamed', // Use name as label for display
@@ -122,11 +125,9 @@ const EditForm: React.FC<EditFormProps> = ({
         description: formData.description,
         type: formData.type,
         tags: formData.tags?.map(tag => ({ name: tag })) || [],
-        ...(isDataset && { fields: formData.fields || [] }),
+        ...(isDataset && { fields: fieldsToSave }),
       },
     };
-    
-    console.log('EditForm handleSave - updatedData:', updatedData);
     
     onUpdate(updatedData);
     

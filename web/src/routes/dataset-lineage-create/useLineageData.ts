@@ -21,6 +21,7 @@ export const useLineageData = () => {
     edges: new Map(),
   });
 
+
   // Add or update a node in the lineage data
   const updateNode = useCallback((nodeId: string, nodeData: LineageNodeData) => {
     setLineageData(prev => ({

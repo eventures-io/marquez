@@ -455,7 +455,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
       {/* Details pane for editing node details */}
       <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
         <EditForm 
-          selectedNodeData={selectedNodeId ? getNode(selectedNodeId) || selectedNodeData : selectedNodeData}
+          selectedNodeData={selectedNodeId ? getNode(selectedNodeId) : null}
           selectedNodeId={selectedNodeId}
           onClose={handlePaneClick}
           onUpdate={(updatedData: any) => {
@@ -470,7 +470,6 @@ const DatasetLineageCreateFlow: React.FC = () => {
                   ...(updatedData.job && { job: { ...currentNode.job, ...updatedData.job } }),
                 };
                 
-                console.log('Updating node:', selectedNodeId, 'with data:', updatedNodeData);
                 updateNode(selectedNodeId, updatedNodeData);
                 
                 // Mark initial dataset as configured if this is the first dataset
