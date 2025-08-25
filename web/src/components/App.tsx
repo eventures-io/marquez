@@ -17,6 +17,7 @@ import { theme } from '../helpers/theme'
 import ColumnLevel from '../routes/column-level/ColumnLevel'
 import Dashboard from '../routes/dashboard/Dashboard'
 import DatasetLineageV2 from '../routes/dataset-lineage-v2/DatasetLineageV2'
+import DatasetLineageCreate from '../routes/dataset-lineage-create/DatasetLineageCreate'
 import Datasets from '../routes/datasets/Datasets'
 import Events from '../routes/events/Events'
 import Header from './header/Header'
@@ -76,6 +77,10 @@ const App = (): ReactElement => {
                     <Route 
                       path={'/v2/dataset/:namespace/:name'} 
                       element={<DatasetLineageV2 />} 
+                    />
+                    <Route 
+                      path={'/v2/dataset/create'} 
+                      element={<DatasetLineageCreate />} 
                     />
                     <Route path='*' element={<NotFound />} />
                   </Routes>
