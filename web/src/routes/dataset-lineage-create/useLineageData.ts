@@ -103,23 +103,23 @@ export const useLineageData = () => {
   }, [lineageData.nodes.size, updateNode, updateNodePosition, toReactFlowFormat]);
 
   // Create a new job node
-  const createJobNode = useCallback((id: string, position: { x: number; y: number }) => {
+  const createJobNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
     const jobData: LineageNodeData = {
       id,
-      label: `Job ${id}`,
+      label: '',
       type: NodeType.JOB,
       job: {
-        id: { namespace: 'example', name: id },
-        name: id,
-        namespace: 'example',
+        id: { namespace, name: '' },
+        name: '',
+        namespace,
         type: 'BATCH' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         inputs: [],
         outputs: [],
-        location: 'example://job',
-        description: `Job ${id} created via drag and drop`,
-        simpleName: id,
+        location: '',
+        description: '',
+        simpleName: '',
         latestRun: null,
         parentJobName: null,
         parentJobUuid: null
@@ -132,25 +132,25 @@ export const useLineageData = () => {
   }, [updateNode, updateNodePosition]);
 
   // Create a new dataset node
-  const createDatasetNode = useCallback((id: string, position: { x: number; y: number }) => {
+  const createDatasetNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
     const datasetData: LineageNodeData = {
       id,
-      label: `Dataset ${id}`,
+      label: '',
       type: NodeType.DATASET,
       dataset: {
-        id: { namespace: 'example', name: id },
-        name: id,
-        namespace: 'example',
+        id: { namespace, name: '' },
+        name: '',
+        namespace,
         type: 'DB_TABLE' as const,
-        physicalName: `example.${id}`,
+        physicalName: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        sourceName: 'example_source',
+        sourceName: '',
         fields: [],
         facets: {},
         tags: [],
         lastModifiedAt: new Date().toISOString(),
-        description: `Dataset ${id} created via drag and drop`
+        description: ''
       }
     };
 

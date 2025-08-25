@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { Box } from '@mui/material';
+import { Box, Button, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -20,6 +20,8 @@ import { useDrawerState } from './useDrawerState';
 import { useLineageData } from './useLineageData';
 import EditForm from './EditForm';
 import { NodeType } from '../../types/lineage';
+import { saveCompleteLineage, validateLineageForSave } from '../../store/requests/lineageCreation';
+import SaveIcon from '@mui/icons-material/Save';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {
@@ -40,23 +42,23 @@ const createInitialNodes = (): Node[] => [
     position: { x: 50, y: 300 },
     data: {
       id: 'dataset-1',
-      label: 'Initial Dataset',
+      label: '',
       type: NodeType.DATASET,
       onNodeClick: () => {}, // Will be replaced dynamically
       dataset: {
-        id: { namespace: 'example', name: 'initial_dataset' },
-        name: 'initial_dataset',
-        namespace: 'example',
+        id: { namespace: '', name: '' },
+        name: '',
+        namespace: '',
         type: 'DB_TABLE' as const,
-        physicalName: 'example.initial_dataset',
+        physicalName: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        sourceName: 'example_source',
+        sourceName: '',
         fields: [],
         facets: {},
         tags: [],
         lastModifiedAt: new Date().toISOString(),
-        description: 'Initial dataset for lineage creation'
+        description: ''
       }
     }
   }
@@ -71,6 +73,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
   
   // Lineage data management
   const {
+    lineageData,
     updateNode,
     updateNodePosition,
     addEdge: addLineageEdge,
@@ -90,6 +93,13 @@ const DatasetLineageCreateFlow: React.FC = () => {
   
   // Track if first job node has been created
   const [hasCreatedFirstJob, setHasCreatedFirstJob] = useState(false);
+  
+  // Save lineage state
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   // Initialize once on mount
   const initializedRef = useRef(false);
@@ -136,15 +146,13 @@ const DatasetLineageCreateFlow: React.FC = () => {
           if (node.id === 'dataset-1') {
             isNodeConfigured = isInitialDatasetConfigured;
           } else if (node.data?.type === NodeType.DATASET) {
-            // For dataset nodes, check if namespace and name are configured (and not default values)
-            const namespace = node.data?.dataset?.namespace?.trim();
+            // For dataset nodes, only check name (namespace inherited from initial dataset)
             const name = node.data?.dataset?.name?.trim();
-            isNodeConfigured = !!(namespace && name && namespace !== 'example' && !name.startsWith('dataset-'));
+            isNodeConfigured = !!(name && name.length > 0);
           } else if (node.data?.type === NodeType.JOB) {
-            // For job nodes, check if namespace and name are configured (and not default values)
-            const namespace = node.data?.job?.namespace?.trim();
+            // For job nodes, only check name (namespace inherited from initial dataset)
             const name = node.data?.job?.name?.trim();
-            isNodeConfigured = !!(namespace && name && namespace !== 'example' && !name.startsWith('job-'));
+            isNodeConfigured = !!(name && name.length > 0);
           }
           
           return {
@@ -159,6 +167,76 @@ const DatasetLineageCreateFlow: React.FC = () => {
       );
     }
   }, [isInitialDatasetConfigured, isDrawerOpen, hasCreatedFirstJob]);
+
+  // Track changes for unsaved changes warning
+  useEffect(() => {
+    if (initializedRef.current && (nodes.length > 1 || edges.length > 0)) {
+      setHasUnsavedChanges(true);
+    }
+  }, [nodes, edges, lineageData]);
+
+  // Warn on page leave with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+      }
+    };
+    
+    if (hasUnsavedChanges) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    }
+    
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Validate lineage for save
+  const validateLineage = useCallback(() => {
+    const errors = validateLineageForSave({
+      nodes: new Map(Array.from(lineageData.nodes)),
+      edges: new Map(Array.from(lineageData.edges))
+    });
+    setValidationErrors(errors);
+    return errors.length === 0;
+  }, [lineageData]);
+
+  // Handle save lineage
+  const handleSaveLineage = async () => {
+    // Validate first
+    if (!validateLineage()) {
+      setShowValidationErrors(true);
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await saveCompleteLineage({
+        nodes: new Map(Array.from(lineageData.nodes)),
+        edges: new Map(Array.from(lineageData.edges))
+      });
+      
+      setHasUnsavedChanges(false);
+      setShowSuccessDialog(true);
+      
+    } catch (error: any) {
+      alert(`Failed to save lineage: ${error.message}`);
+      console.error('Save lineage error:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Get the namespace from the initial dataset
+  const getLineageNamespace = useCallback(() => {
+    const initialDatasetNode = lineageData.nodes.get('dataset-1');
+    return initialDatasetNode?.dataset?.namespace || 'example';
+  }, [lineageData.nodes]);
+
+  // Check if lineage can be saved
+  const canSaveLineage = useCallback(() => {
+    return lineageData.nodes.size > 1 && !isSaving;
+  }, [lineageData.nodes.size, isSaving]);
 
   const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
   
@@ -208,6 +286,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         if (sourceNodeType === NodeType.DATASET) {
           // If source is dataset, create job node
           const id = getJobId();
+          const namespace = getLineageNamespace();
           
           // Mark that first job has been created
           setHasCreatedFirstJob(true);
@@ -219,42 +298,42 @@ const DatasetLineageCreateFlow: React.FC = () => {
             position,
             data: {
               id,
-              label: `Job ${id}`,
+              label: '',
               type: NodeType.JOB,
               isDragEnabled: false, // Initially disabled until configured
               onNodeClick: (nodeId: string) => handleNodeClick(nodeId, {
                 id,
-                label: `Job ${id}`,
+                label: '',
                 type: NodeType.JOB,
                 job: {
-                  id: { namespace: 'example', name: id },
-                  name: id,
-                  namespace: 'example',
+                  id: { namespace, name: '' },
+                  name: '',
+                  namespace,
                   type: 'BATCH',
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                   inputs: [],
                   outputs: [],
-                  location: 'example://job',
-                  description: `Job ${id} created via drag and drop`,
-                  simpleName: id,
+                  location: '',
+                  description: '',
+                  simpleName: '',
                   latestRun: null,
                   parentJobName: null,
                   parentJobUuid: null
                 }
               }),
               job: {
-                id: { namespace: 'example', name: id },
-                name: id,
-                namespace: 'example',
+                id: { namespace, name: '' },
+                name: '',
+                namespace,
                 type: 'BATCH',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 inputs: [],
                 outputs: [],
-                location: 'example://job',
-                description: `Job ${id} created via drag and drop`,
-                simpleName: id,
+                location: '',
+                description: '',
+                simpleName: '',
                 latestRun: null,
                 parentJobName: null,
                 parentJobUuid: null
@@ -262,8 +341,8 @@ const DatasetLineageCreateFlow: React.FC = () => {
             }
           };
 
-          // Add to lineage data
-          createJobNode(id, position);
+          // Add to lineage data with shared namespace
+          createJobNode(id, position, namespace);
           
           // Add edge
           const edgeId = `${connectionState.fromNode.id}-${id}`;
@@ -280,6 +359,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         } else if (sourceNodeType === NodeType.JOB) {
           // If source is job, create dataset node
           const id = getDatasetId();
+          const namespace = getLineageNamespace();
           
           // Create new dataset node
           const newDatasetNode = {
@@ -288,49 +368,49 @@ const DatasetLineageCreateFlow: React.FC = () => {
             position,
             data: {
               id,
-              label: `Dataset ${id}`,
+              label: `Dataset`,
               type: NodeType.DATASET,
               isDragEnabled: false, // Initially disabled until configured
               onNodeClick: (nodeId: string) => handleNodeClick(nodeId, {
                 id,
-                label: `Dataset ${id}`,
+                label: `Dataset`,
                 type: NodeType.DATASET,
                 dataset: {
-                  id: { namespace: 'example', name: id },
-                  name: id,
-                  namespace: 'example',
+                  id: { namespace, name: '' },
+                  name: '',
+                  namespace,
                   type: 'DB_TABLE',
-                  physicalName: `example.${id}`,
+                  physicalName: '',
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
-                  sourceName: 'example_source',
+                  sourceName: '',
                   fields: [],
                   facets: {},
                   tags: [],
                   lastModifiedAt: new Date().toISOString(),
-                  description: `Dataset ${id} created via drag and drop`
+                  description: ''
                 }
               }),
               dataset: {
-                id: { namespace: 'example', name: id },
-                name: id,
-                namespace: 'example',
+                id: { namespace, name: '' },
+                name: '',
+                namespace,
                 type: 'DB_TABLE',
-                physicalName: `example.${id}`,
+                physicalName: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                sourceName: 'example_source',
+                sourceName: '',
                 fields: [],
                 facets: {},
                 tags: [],
                 lastModifiedAt: new Date().toISOString(),
-                description: `Dataset ${id} created via drag and drop`
+                description: ''
               }
             }
           };
 
-          // Add to lineage data
-          createDatasetNode(id, position);
+          // Add to lineage data with shared namespace
+          createDatasetNode(id, position, namespace);
           
           // Add edge
           const edgeId = `${connectionState.fromNode.id}-${id}`;
@@ -355,6 +435,23 @@ const DatasetLineageCreateFlow: React.FC = () => {
       height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
       sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
     >
+      {/* Save Lineage Button */}
+      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1000, display: 'flex', gap: 1 }}>
+        {hasUnsavedChanges && (
+          <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.75rem' }}>
+            Unsaved changes
+          </Alert>
+        )}
+        <Button
+          variant="contained"
+          onClick={handleSaveLineage}
+          disabled={!canSaveLineage()}
+          startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+          size="medium"
+        >
+          {isSaving ? 'Saving...' : 'Save Lineage'}
+        </Button>
+      </Box>
       {/* Details pane for editing node details */}
       <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
         <EditForm 
@@ -373,6 +470,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
                   ...(updatedData.job && { job: { ...currentNode.job, ...updatedData.job } }),
                 };
                 
+                console.log('Updating node:', selectedNodeId, 'with data:', updatedNodeData);
                 updateNode(selectedNodeId, updatedNodeData);
                 
                 // Mark initial dataset as configured if this is the first dataset
@@ -380,9 +478,23 @@ const DatasetLineageCreateFlow: React.FC = () => {
                   setIsInitialDatasetConfigured(true);
                 }
                 
-                // Refresh ReactFlow with updated data
-                const flowData = toReactFlowFormat(handleNodeClick);
-                setNodes(flowData.nodes);
+                // Update ReactFlow nodes immediately with the new data
+                setNodes(currentNodes => 
+                  currentNodes.map(node => {
+                    if (node.id === selectedNodeId) {
+                      return {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          label: updatedNodeData.label,
+                          ...(updatedNodeData.dataset && { dataset: updatedNodeData.dataset }),
+                          ...(updatedNodeData.job && { job: updatedNodeData.job })
+                        }
+                      };
+                    }
+                    return node;
+                  })
+                );
               }
             }
           }}
@@ -407,6 +519,47 @@ const DatasetLineageCreateFlow: React.FC = () => {
           <MiniMap />
         </ReactFlow>
       </Box>
+
+      {/* Validation Errors Dialog */}
+      <Dialog open={showValidationErrors} onClose={() => setShowValidationErrors(false)} maxWidth="md">
+        <DialogTitle>Cannot Save Lineage</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mb: 2 }}>
+            Please fix the following issues before saving:
+          </Box>
+          {validationErrors.map((error, index) => (
+            <Alert key={index} severity="error" sx={{ mb: 1 }}>
+              {error}
+            </Alert>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowValidationErrors(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onClose={() => setShowSuccessDialog(false)}>
+        <DialogTitle>Lineage Saved Successfully!</DialogTitle>
+        <DialogContent>
+          Your data lineage has been saved to the database. You can now view it in the lineage graph or create a new one.
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setShowSuccessDialog(false);
+            // TODO: Navigate to lineage view or reset form
+            window.location.reload(); // Temporary - refresh to create new lineage
+          }} variant="contained">
+            Create New Lineage
+          </Button>
+          <Button onClick={() => {
+            setShowSuccessDialog(false);
+            // TODO: Navigate to saved lineage view
+          }}>
+            View Saved Lineage
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

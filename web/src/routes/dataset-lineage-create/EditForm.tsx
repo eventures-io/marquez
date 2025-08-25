@@ -40,7 +40,7 @@ const EditForm: React.FC<EditFormProps> = ({
   onClose,
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    label: '',
+    label: '', // Keep for compatibility but don't show in form
     namespace: '',
     name: '',
     description: '',
@@ -98,13 +98,9 @@ const EditForm: React.FC<EditFormProps> = ({
 
   const handleSave = () => {
     // Basic validation
-    if (!formData.label.trim()) {
-      alert('Please provide a label for this node.');
-      return;
-    }
     
-    if (!formData.namespace.trim()) {
-      alert('Please provide a namespace.');
+    if (isInitialDataset && !formData.namespace.trim()) {
+      alert('Please provide a namespace for the lineage.');
       return;
     }
     
@@ -115,11 +111,13 @@ const EditForm: React.FC<EditFormProps> = ({
     
     const isDataset = selectedNodeData.type === NodeType.DATASET;
     
+    console.log('EditForm handleSave - formData.fields:', formData.fields);
+    
     const updatedData = {
-      label: formData.label,
+      label: formData.name || 'Unnamed', // Use name as label for display
       [isDataset ? 'dataset' : 'job']: {
         ...selectedNodeData[isDataset ? 'dataset' : 'job'],
-        namespace: formData.namespace,
+        ...(isInitialDataset && { namespace: formData.namespace }), // Only set namespace for initial dataset
         name: formData.name,
         description: formData.description,
         type: formData.type,
@@ -127,6 +125,8 @@ const EditForm: React.FC<EditFormProps> = ({
         ...(isDataset && { fields: formData.fields || [] }),
       },
     };
+    
+    console.log('EditForm handleSave - updatedData:', updatedData);
     
     onUpdate(updatedData);
     
@@ -145,6 +145,7 @@ const EditForm: React.FC<EditFormProps> = ({
   }
 
   const isDataset = selectedNodeData.type === NodeType.DATASET;
+  const isInitialDataset = selectedNodeId === 'dataset-1';
 
   return (
     <Box p={3} sx={{ width: '100%', maxWidth: 400 }}>
@@ -152,21 +153,17 @@ const EditForm: React.FC<EditFormProps> = ({
         Edit {isDataset ? 'Dataset' : 'Job'}
       </Typography>
 
-      <TextField
-        fullWidth
-        label="Label"
-        value={formData.label}
-        onChange={(e) => handleInputChange('label', e.target.value)}
-        sx={{ mb: 2 }}
-      />
 
-      <TextField
-        fullWidth
-        label="Namespace"
-        value={formData.namespace}
-        onChange={(e) => handleInputChange('namespace', e.target.value)}
-        sx={{ mb: 2 }}
-      />
+      {isInitialDataset && (
+        <TextField
+          fullWidth
+          label="Namespace"
+          value={formData.namespace}
+          onChange={(e) => handleInputChange('namespace', e.target.value)}
+          sx={{ mb: 2 }}
+          helperText="All nodes in this lineage will use this namespace"
+        />
+      )}
 
       <TextField
         fullWidth
@@ -174,6 +171,9 @@ const EditForm: React.FC<EditFormProps> = ({
         value={formData.name}
         onChange={(e) => handleInputChange('name', e.target.value)}
         sx={{ mb: 2 }}
+        required
+        error={!formData.name.trim() && formData.name !== ''}
+        helperText={!formData.name.trim() && formData.name !== '' ? 'Name is required' : ''}
       />
 
       <TextField
