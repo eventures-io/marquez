@@ -128,10 +128,11 @@ const DatasetLineageCreateFlow: React.FC = () => {
         const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
         const sourceNodeType = sourceNode?.data?.type;
         
-        // Adjust position to center the node based on type
-        const nodeWidth = 180; // Consistent width for both types
+        // Use consistent horizontal spacing, only use drop Y position
+        const horizontalSpacing = 250; // Fixed distance between nodes
+        const sourceNodePosition = sourceNode?.position || { x: 0, y: 0 };
         
-        // Different heights for different node types
+        // Different heights for different node types for vertical centering
         let nodeHeight;
         if (sourceNodeType === NodeType.DATASET) {
           // Creating job node - jobs are typically shorter
@@ -142,8 +143,8 @@ const DatasetLineageCreateFlow: React.FC = () => {
         }
         
         const position = {
-          x: dropPosition.x - nodeWidth / 2,
-          y: dropPosition.y - nodeHeight / 2
+          x: sourceNodePosition.x + horizontalSpacing, // Fixed horizontal distance from source
+          y: dropPosition.y - nodeHeight / 2 // Use drop Y position, centered vertically
         };
         
         console.log('Drop position:', dropPosition, 'Node type creating:', sourceNodeType === NodeType.DATASET ? 'JOB' : 'DATASET', 'Height:', nodeHeight, 'Centered position:', position);
