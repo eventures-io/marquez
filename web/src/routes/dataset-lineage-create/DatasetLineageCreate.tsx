@@ -85,6 +85,12 @@ const DatasetLineageCreateFlow: React.FC = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   
+  // Track if initial dataset is properly specified
+  const [isInitialDatasetConfigured, setIsInitialDatasetConfigured] = useState(false);
+  
+  // Track if first job node has been created
+  const [hasCreatedFirstJob, setHasCreatedFirstJob] = useState(false);
+
   // Initialize once on mount
   const initializedRef = useRef(false);
   useEffect(() => {
@@ -97,7 +103,9 @@ const DatasetLineageCreateFlow: React.FC = () => {
           ...node,
           data: {
             ...node.data,
-            onNodeClick: (nodeId: string) => handleNodeClick(nodeId, node.data as any)
+            onNodeClick: (nodeId: string) => handleNodeClick(nodeId, node.data as any),
+            isInitialDatasetConfigured: false, // Initially not configured
+            isDragEnabled: false // Initially disabled until configured
           }
         }))
       );
@@ -112,13 +120,61 @@ const DatasetLineageCreateFlow: React.FC = () => {
         dataset: nodeData.dataset
       });
       updateNodePosition(initialNode.id, { x: 50, y: 300 });
+      
+      // Auto-open drawer for initial dataset configuration
+      handleNodeClick(initialNode.id, nodeData);
     }
   }, []); // Empty dependency array - only run once
+
+  // Update nodes with pulsing handle state when dataset is configured or drawer state changes
+  useEffect(() => {
+    if (initializedRef.current) {
+      setNodes(currentNodes => 
+        currentNodes.map(node => {
+          // Check if node is configured based on its data
+          let isNodeConfigured = false;
+          if (node.id === 'dataset-1') {
+            isNodeConfigured = isInitialDatasetConfigured;
+          } else if (node.data?.type === NodeType.DATASET) {
+            // For dataset nodes, check if namespace and name are configured (and not default values)
+            const namespace = node.data?.dataset?.namespace?.trim();
+            const name = node.data?.dataset?.name?.trim();
+            isNodeConfigured = !!(namespace && name && namespace !== 'example' && !name.startsWith('dataset-'));
+          } else if (node.data?.type === NodeType.JOB) {
+            // For job nodes, check if namespace and name are configured (and not default values)
+            const namespace = node.data?.job?.namespace?.trim();
+            const name = node.data?.job?.name?.trim();
+            isNodeConfigured = !!(namespace && name && namespace !== 'example' && !name.startsWith('job-'));
+          }
+          
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              showPulsingHandle: node.id === 'dataset-1' && isInitialDatasetConfigured && !isDrawerOpen && !hasCreatedFirstJob,
+              isDragEnabled: isNodeConfigured
+            }
+          };
+        })
+      );
+    }
+  }, [isInitialDatasetConfigured, isDrawerOpen, hasCreatedFirstJob]);
 
   const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
   
   const onConnectEnd = useCallback(
     (event: any, connectionState: any) => {
+      // Prevent dragging until initial dataset is configured
+      if (!isInitialDatasetConfigured) {
+        return;
+      }
+      
+      // Check if source node is configured before allowing connection
+      const sourceNode = nodes.find(node => node.id === connectionState.fromNode.id);
+      if (sourceNode && sourceNode.data.isDragEnabled === false) {
+        return;
+      }
+      
       // When a connection is dropped on the pane it's not valid
       if (!connectionState.isValid) {
         const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
@@ -153,6 +209,9 @@ const DatasetLineageCreateFlow: React.FC = () => {
           // If source is dataset, create job node
           const id = getJobId();
           
+          // Mark that first job has been created
+          setHasCreatedFirstJob(true);
+          
           // Create new job node
           const newJobNode = {
             id,
@@ -162,6 +221,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
               id,
               label: `Job ${id}`,
               type: NodeType.JOB,
+              isDragEnabled: false, // Initially disabled until configured
               onNodeClick: (nodeId: string) => handleNodeClick(nodeId, {
                 id,
                 label: `Job ${id}`,
@@ -230,6 +290,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
               id,
               label: `Dataset ${id}`,
               type: NodeType.DATASET,
+              isDragEnabled: false, // Initially disabled until configured
               onNodeClick: (nodeId: string) => handleNodeClick(nodeId, {
                 id,
                 label: `Dataset ${id}`,
@@ -285,7 +346,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         }
       }
     },
-    [screenToFlowPosition, nodes, createJobNode, createDatasetNode, addLineageEdge, toReactFlowFormat, handleNodeClick, setNodes, setEdges],
+    [screenToFlowPosition, nodes, createJobNode, createDatasetNode, addLineageEdge, toReactFlowFormat, handleNodeClick, setNodes, setEdges, isInitialDatasetConfigured],
   );
 
   return (
@@ -313,6 +374,11 @@ const DatasetLineageCreateFlow: React.FC = () => {
                 };
                 
                 updateNode(selectedNodeId, updatedNodeData);
+                
+                // Mark initial dataset as configured if this is the first dataset
+                if (selectedNodeId === 'dataset-1' && updatedData.dataset) {
+                  setIsInitialDatasetConfigured(true);
+                }
                 
                 // Refresh ReactFlow with updated data
                 const flowData = toReactFlowFormat(handleNodeClick);

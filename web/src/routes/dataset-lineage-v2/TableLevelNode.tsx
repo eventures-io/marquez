@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography, Chip, Tooltip } from '@mui/material';
 import { NodeType, LineageDataset, LineageJob } from '@app-types';
 
 interface TableLevelNodeData {
@@ -11,6 +11,8 @@ interface TableLevelNodeData {
   job?: LineageJob;
   isCompact?: boolean;
   onNodeClick?: (id: string) => void;
+  showPulsingHandle?: boolean;
+  isDragEnabled?: boolean;
 }
 
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {
@@ -167,17 +169,72 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
 
       {renderDatasetFields()}
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={isConnectable}
-        style={{ 
-          background: nodeStyle.borderColor,
-          width: 8,
-          height: 8,
-          border: '2px solid white',
-        }}
-      />
+      {nodeData.showPulsingHandle ? (
+        <Tooltip title="Drag to create the next node" placement="top">
+          <Handle
+            type="source"
+            position={Position.Right}
+            isConnectable={nodeData.isDragEnabled !== false}
+            style={{ 
+              background: '#4CAF50',
+              width: 5,
+              height: 5,
+              border: 'none',
+            }}
+          />
+        </Tooltip>
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Right}
+          isConnectable={nodeData.isDragEnabled !== false}
+          style={{ 
+            background: nodeData.isDragEnabled === false ? '#ccc' : nodeStyle.borderColor,
+            width: 8,
+            height: 8,
+            border: '2px solid white',
+            opacity: nodeData.isDragEnabled === false ? 0.5 : 1,
+          }}
+        />
+      )}
+      {nodeData.showPulsingHandle && (
+        <>
+          <div
+            className="pulse-circle"
+            style={{
+              position: 'absolute',
+              right: '-10px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              background: 'rgba(76, 175, 80, 0.3)',
+              pointerEvents: 'none',
+              zIndex: -1,
+            }}
+          />
+          <style>{`
+            .pulse-circle {
+              animation: pulseCircle 2s ease-in-out infinite;
+            }
+            @keyframes pulseCircle {
+              0% {
+                transform: translateY(-50%) scale(0.8);
+                opacity: 1;
+              }
+              50% {
+                transform: translateY(-50%) scale(1.4);
+                opacity: 0.3;
+              }
+              100% {
+                transform: translateY(-50%) scale(0.8);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </>
+      )}
     </div>
   );
 };

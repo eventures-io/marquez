@@ -97,6 +97,22 @@ const EditForm: React.FC<EditFormProps> = ({
   };
 
   const handleSave = () => {
+    // Basic validation
+    if (!formData.label.trim()) {
+      alert('Please provide a label for this node.');
+      return;
+    }
+    
+    if (!formData.namespace.trim()) {
+      alert('Please provide a namespace.');
+      return;
+    }
+    
+    if (!formData.name.trim()) {
+      alert('Please provide a name.');
+      return;
+    }
+    
     const isDataset = selectedNodeData.type === NodeType.DATASET;
     
     const updatedData = {
