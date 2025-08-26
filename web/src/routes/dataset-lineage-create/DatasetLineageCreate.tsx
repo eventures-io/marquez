@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { Box, Button, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import {
@@ -13,6 +12,7 @@ import {
   useReactFlow,
   Node,
   Edge,
+  Connection,
 } from '@xyflow/react';
 import TableLevelNode from '../dataset-lineage-v2/TableLevelNode';
 import DetailsPane from '../dataset-lineage-v2/DetailsPane';
@@ -69,7 +69,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
   const { screenToFlowPosition } = useReactFlow();
   
   // Drawer state
-  const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick, updateSelectedNodeData } = useDrawerState();
+  const { isDrawerOpen, selectedNodeId, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
   
   // Lineage data management
   const {
@@ -79,14 +79,13 @@ const DatasetLineageCreateFlow: React.FC = () => {
     addEdge: addLineageEdge,
     getNode,
     toReactFlowFormat,
-    initializeWithDefaults,
     createJobNode,
     createDatasetNode,
   } = useLineageData();
   
   // Initialize nodes and edges
-  const [nodes, setNodes, onNodesChange] = useNodesState(createInitialNodes());
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>(createInitialNodes());
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   
   // Track if initial dataset is properly specified
   const [isInitialDatasetConfigured, setIsInitialDatasetConfigured] = useState(false);
@@ -147,11 +146,11 @@ const DatasetLineageCreateFlow: React.FC = () => {
             isNodeConfigured = isInitialDatasetConfigured;
           } else if (node.data?.type === NodeType.DATASET) {
             // For dataset nodes, only check name (namespace inherited from initial dataset)
-            const name = node.data?.dataset?.name?.trim();
+            const name = (node.data as any)?.dataset?.name?.trim();
             isNodeConfigured = !!(name && name.length > 0);
           } else if (node.data?.type === NodeType.JOB) {
             // For job nodes, only check name (namespace inherited from initial dataset)
-            const name = node.data?.job?.name?.trim();
+            const name = (node.data as any)?.job?.name?.trim();
             isNodeConfigured = !!(name && name.length > 0);
           }
           
@@ -180,7 +179,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
-        e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+        return 'You have unsaved changes. Are you sure you want to leave?';
       }
     };
     
@@ -230,7 +229,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
   // Get the namespace from the initial dataset
   const getLineageNamespace = useCallback(() => {
     const initialDatasetNode = lineageData.nodes.get('dataset-1');
-    return initialDatasetNode?.dataset?.namespace || 'example';
+    return initialDatasetNode?.dataset?.namespace || '';
   }, [lineageData.nodes]);
 
   // Check if lineage can be saved
@@ -238,10 +237,10 @@ const DatasetLineageCreateFlow: React.FC = () => {
     return lineageData.nodes.size > 1 && !isSaving;
   }, [lineageData.nodes.size, isSaving]);
 
-  const onConnect = useCallback((params: any) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+  const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
   
   const onConnectEnd = useCallback(
-    (event: any, connectionState: any) => {
+    (event: MouseEvent | TouchEvent, connectionState: any) => {
       // Prevent dragging until initial dataset is configured
       if (!isInitialDatasetConfigured) {
         return;
@@ -280,9 +279,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
           x: sourceNodePosition.x + horizontalSpacing, // Fixed horizontal distance from source
           y: dropPosition.y - nodeHeight / 2 // Use drop Y position, centered vertically
         };
-        
-        console.log('Drop position:', dropPosition, 'Node type creating:', sourceNodeType === NodeType.DATASET ? 'JOB' : 'DATASET', 'Height:', nodeHeight, 'Centered position:', position);
-        
+                
         if (sourceNodeType === NodeType.DATASET) {
           // If source is dataset, create job node
           const id = getJobId();
