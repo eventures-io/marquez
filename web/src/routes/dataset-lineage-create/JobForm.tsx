@@ -1,0 +1,319 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  TextField,
+  Button,
+  Chip,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Divider,
+  Typography,
+  Tabs,
+  Tab,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+
+interface JobFormData {
+  label: string;
+  namespace: string;
+  name: string;
+  description: string;
+  type: string;
+  tags: string[];
+  transformationCode: string;
+  // Facets
+  sourceCodeLocation: string;
+  sourceCode: string;
+  sql: string;
+  ownership: string;
+}
+
+interface JobFormProps {
+  selectedNodeData: any;
+  selectedNodeId: string | null;
+  onUpdate: (updatedData: any) => void;
+  onClose?: () => void;
+}
+
+const JobForm: React.FC<JobFormProps> = ({
+  selectedNodeData,
+  selectedNodeId,
+  onUpdate,
+  onClose,
+}) => {
+  const [formData, setFormData] = useState<JobFormData>({
+    label: '',
+    namespace: '',
+    name: '',
+    description: '',
+    type: '',
+    tags: [],
+    transformationCode: '',
+    sourceCodeLocation: '',
+    sourceCode: '',
+    sql: '',
+    ownership: '',
+  });
+  
+  const [newTag, setNewTag] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
+
+  useEffect(() => {
+    if (selectedNodeData) {
+      const entity = selectedNodeData.job;
+      
+      setFormData({
+        label: selectedNodeData.label || '',
+        namespace: entity?.namespace || '',
+        name: entity?.name || '',
+        description: entity?.description || '',
+        type: entity?.type || '',
+        tags: entity?.tags?.map((tag: any) => tag.name || tag) || [],
+        transformationCode: entity?.transformationCode || '',
+        sourceCodeLocation: entity?.sourceCodeLocation || '',
+        sourceCode: entity?.sourceCode || '',
+        sql: entity?.sql || entity?.transformationCode || 'SELECT * FROM source_table;',
+        ownership: entity?.ownership || '',
+      });
+    }
+  }, [selectedNodeData]);
+
+  const handleInputChange = (field: keyof JobFormData, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddTag = () => {
+    if (newTag.trim() && !formData.tags?.includes(newTag.trim())) {
+      handleInputChange('tags', [...(formData.tags || []), newTag.trim()]);
+      setNewTag('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    handleInputChange('tags', formData.tags?.filter(tag => tag !== tagToRemove) || []);
+  };
+
+  const handleSave = () => {
+    if (!formData.namespace.trim()) {
+      alert('Please provide a namespace.');
+      return;
+    }
+    
+    if (!formData.name.trim()) {
+      alert('Please provide a name.');
+      return;
+    }
+    
+    const updatedData = {
+      label: formData.name || 'Unnamed',
+      job: {
+        ...selectedNodeData.job,
+        namespace: formData.namespace,
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        tags: formData.tags?.map(tag => ({ name: tag })) || [],
+        transformationCode: formData.transformationCode,
+        sourceCodeLocation: formData.sourceCodeLocation,
+        sourceCode: formData.sourceCode,
+        sql: formData.sql,
+        ownership: formData.ownership,
+      },
+    };
+    
+    onUpdate(updatedData);
+    
+    if (onClose) {
+      onClose();
+    }
+  };
+
+  return (
+    <Box>
+      <TextField
+        fullWidth
+        label="Namespace"
+        value={formData.namespace}
+        onChange={(e) => handleInputChange('namespace', e.target.value)}
+        sx={{ mb: 2 }}
+        required
+        error={!formData.namespace.trim() && formData.namespace !== ''}
+        helperText={!formData.namespace.trim() && formData.namespace !== '' ? 'Namespace is required' : 'The namespace for this job'}
+      />
+
+      <TextField
+        fullWidth
+        label="Name"
+        value={formData.name}
+        onChange={(e) => handleInputChange('name', e.target.value)}
+        sx={{ mb: 2 }}
+        required
+        error={!formData.name.trim() && formData.name !== ''}
+        helperText={!formData.name.trim() && formData.name !== '' ? 'Name is required' : ''}
+      />
+
+      <TextField
+        fullWidth
+        label="Description"
+        multiline
+        rows={3}
+        value={formData.description}
+        onChange={(e) => handleInputChange('description', e.target.value)}
+        sx={{ mb: 2 }}
+      />
+
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel>Type</InputLabel>
+        <Select
+          value={formData.type}
+          label="Type"
+          onChange={(e) => handleInputChange('type', e.target.value)}
+        >
+          <MenuItem value="BATCH">Batch</MenuItem>
+          <MenuItem value="STREAM">Stream</MenuItem>
+          <MenuItem value="SERVICE">Service</MenuItem>
+        </Select>
+      </FormControl>
+
+      <Divider sx={{ my: 2 }} />
+
+      {/* Tags Section */}
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Tags</Typography>
+      <Box sx={{ mb: 2 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
+          {formData.tags?.map((tag, index) => (
+            <Chip
+              key={index}
+              label={tag}
+              onDelete={() => handleRemoveTag(tag)}
+              size="small"
+            />
+          ))}
+        </Box>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <TextField
+            size="small"
+            placeholder="Add tag"
+            value={newTag}
+            onChange={(e) => setNewTag(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+          />
+          <IconButton onClick={handleAddTag} size="small">
+            <AddIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {/* Ownership Section */}
+      <Divider sx={{ my: 2 }} />
+      <TextField
+        fullWidth
+        label="Ownership"
+        value={formData.ownership}
+        onChange={(e) => handleInputChange('ownership', e.target.value)}
+        sx={{ mb: 2 }}
+        placeholder="e.g., team-data-engineering"
+        helperText="Team or individual responsible for this job"
+      />
+
+      {/* Transformation Section with Tabs */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Transformation</Typography>
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          aria-label="transformation type tabs"
+        >
+          <Tab label="SQL" />
+          <Tab label="Code" />
+        </Tabs>
+      </Box>
+
+      {/* SQL Tab */}
+      {activeTab === 0 && (
+        <Box>
+          <TextField
+            fullWidth
+            label="SQL Query"
+            multiline
+            rows={12}
+            value={formData.sql}
+            onChange={(e) => handleInputChange('sql', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="SELECT * FROM source_table..."
+            id="sql-query-field"
+            name="sqlQuery"
+            InputProps={{
+              sx: { 
+                fontFamily: 'monospace', 
+                fontSize: '0.9rem'
+              }
+            }}
+            inputProps={{
+              style: {
+                padding: '0.5rem',
+                fontFamily: 'monospace'
+              }
+            }}
+            helperText="SQL query executed by this job"
+          />
+        </Box>
+      )}
+
+      {/* Code Tab */}
+      {activeTab === 1 && (
+        <Box>
+          <TextField
+            fullWidth
+            label="Source Code Location"
+            value={formData.sourceCodeLocation}
+            onChange={(e) => handleInputChange('sourceCodeLocation', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="e.g., https://github.com/repo/file.py"
+            helperText="URL or path to the source code"
+          />
+          
+          <TextField
+            fullWidth
+            label="Source Code"
+            multiline
+            rows={10}
+            value={formData.sourceCode}
+            onChange={(e) => handleInputChange('sourceCode', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="def transform_data():\n    # Your code here\n    pass"
+            id="source-code-field"
+            name="sourceCode"
+            InputProps={{
+              sx: { 
+                fontFamily: 'monospace', 
+                fontSize: '0.9rem'
+              }
+            }}
+            inputProps={{
+              style: {
+                padding: '0.5rem',
+                fontFamily: 'monospace'
+              }
+            }}
+            helperText="The actual source code"
+          />
+        </Box>
+      )}
+
+      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+        <Button variant="contained" onClick={handleSave} fullWidth>
+          Save Changes
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
+export default JobForm;

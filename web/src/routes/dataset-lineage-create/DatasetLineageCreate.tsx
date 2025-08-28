@@ -312,6 +312,11 @@ const DatasetLineageCreateFlow: React.FC = () => {
             target: id 
           }]);
           
+          // Automatically open the drawer for the new node after state updates
+          setTimeout(() => {
+            handleNodeClick(id, newJobNode.data);
+          }, 0);
+          
         } else if (sourceNodeType === NodeType.JOB) {
           // If source is job, create dataset node
           const id = getDatasetId();
@@ -379,6 +384,11 @@ const DatasetLineageCreateFlow: React.FC = () => {
             source: connectionState.fromNode.id, 
             target: id 
           }]);
+          
+          // Automatically open the drawer for the new node after state updates
+          setTimeout(() => {
+            handleNodeClick(id, newDatasetNode.data);
+          }, 0);
         }
       }
     },
