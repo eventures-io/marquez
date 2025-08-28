@@ -1,8 +1,7 @@
 import { API_URL } from '../../../globals';
 import { genericFetchWrapper } from '../../../store/requests/index';
-import { NodeType } from '../../../types/lineage';
+import { NodeType, EventType } from '../../../types/lineage';
 
-// Service-layer types (independent of React hooks)
 export interface ServiceLineageNodeData {
   id: string;
   label: string;
@@ -56,7 +55,7 @@ export interface ServiceLineageData {
 }
 
 interface OpenLineageEvent {
-  eventType: 'START' | 'COMPLETE' | 'FAIL' | 'ABORT';
+  eventType: EventType;
   eventTime: string;
   producer: string;
   schemaURL: string;
@@ -318,14 +317,14 @@ export class LineageService {
       };
 
       events.push({
-        eventType: 'START',
+        eventType: EventType.START,
         eventTime: timestamp,
         ...jobEventData
       });
 
       const completeTime = new Date(new Date(timestamp).getTime() + 1000).toISOString();
       events.push({
-        eventType: 'COMPLETE',
+        eventType: EventType.COMPLETE,
         eventTime: completeTime,
         ...jobEventData
       });

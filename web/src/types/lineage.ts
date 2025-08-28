@@ -9,13 +9,33 @@ export enum NodeType {
   DATASET = 'DATASET'
 }
 
+export enum EventType {
+  START = 'START',
+  COMPLETE = 'COMPLETE',
+  FAIL = 'FAIL',
+  ABORT = 'ABORT'
+}
+
+export enum JobType {
+  BATCH = 'BATCH',
+  STREAM = 'STREAM',
+  SERVICE = 'SERVICE'
+}
+
+export enum DatasetType {
+  DB_TABLE = 'DB_TABLE',
+  STREAM = 'STREAM',
+  SERVICE = 'SERVICE'
+}
+
+
 export type JobOrDataset = 'JOB' | 'DATASET'
 export type BatchOrStream = 'BATCH' | 'STREAM' | 'SERVICE'
 export type DbTableOrStream = 'DB_TABLE' | 'STREAM'
 
 export interface LineageDataset {
   id: { namespace: string; name: string }
-  type: DbTableOrStream
+  type: DatasetType
   name: string
   physicalName: string
   createdAt: string
@@ -31,7 +51,7 @@ export interface LineageDataset {
 
 export interface LineageJob {
   id: { namespace: string; name: string }
-  type: BatchOrStream
+  type: JobType
   name: string
   createdAt: string
   updatedAt: string
@@ -53,7 +73,7 @@ export interface LineageEdge {
 
 export interface LineageNode {
   id: string
-  type: JobOrDataset
+  type: NodeType
   data: LineageDataset | LineageJob
   inEdges: LineageEdge[]
   outEdges: LineageEdge[]

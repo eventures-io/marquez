@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
+import { JobType } from '../../types/lineage';
 
 interface JobFormData {
   label: string;
@@ -184,9 +185,9 @@ const JobForm: React.FC<JobFormProps> = ({
           label="Type"
           onChange={(e) => handleInputChange('type', e.target.value)}
         >
-          <MenuItem value="BATCH">Batch</MenuItem>
-          <MenuItem value="STREAM">Stream</MenuItem>
-          <MenuItem value="SERVICE">Service</MenuItem>
+          <MenuItem value={JobType.BATCH}>Batch</MenuItem>
+          <MenuItem value={JobType.STREAM}>Stream</MenuItem>
+          <MenuItem value={JobType.SERVICE}>Service</MenuItem>
         </Select>
       </FormControl>
 

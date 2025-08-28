@@ -21,7 +21,7 @@ import { useLineageData } from './useLineageData';
 import { useSaveLineage } from './useSaveLineage';
 import EditForm from './EditForm';
 import Toolbar from './Toolbar';
-import { NodeType } from '../../types/lineage';
+import { NodeType, JobType, DatasetType } from '../../types/lineage';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {
@@ -48,7 +48,7 @@ const createInitialNodes = (): Node[] => [
         id: { namespace: '', name: '' },
         name: '',
         namespace: '',
-        type: 'DB_TABLE' as const,
+        type: DatasetType.DB_TABLE,
         physicalName: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -265,7 +265,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
                   id: { namespace, name: '' },
                   name: '',
                   namespace,
-                  type: 'BATCH',
+                  type: JobType.BATCH,
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                   inputs: [],
@@ -282,7 +282,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
                 id: { namespace, name: '' },
                 name: '',
                 namespace,
-                type: 'BATCH',
+                type: JobType.BATCH,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 inputs: [],
@@ -340,7 +340,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
                   id: { namespace, name: '' },
                   name: '',
                   namespace,
-                  type: 'DB_TABLE',
+                  type: DatasetType.DB_TABLE,
                   physicalName: '',
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
@@ -356,7 +356,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
                 id: { namespace, name: '' },
                 name: '',
                 namespace,
-                type: 'DB_TABLE',
+                type: DatasetType.DB_TABLE,
                 physicalName: '',
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),

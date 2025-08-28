@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { NodeType, LineageDataset, LineageJob } from '../../types/lineage';
+import { NodeType, JobType, DatasetType, LineageDataset, LineageJob } from '../../types/lineage';
 
 export interface LineageNodeData {
   id: string;
@@ -22,7 +22,6 @@ export const useLineageData = () => {
   });
 
 
-  // Add or update a node in the lineage data
   const updateNode = useCallback((nodeId: string, nodeData: LineageNodeData) => {
     setLineageData(prev => ({
       ...prev,
@@ -30,7 +29,7 @@ export const useLineageData = () => {
     }));
   }, []);
 
-  // Add an edge to the lineage data
+
   const addEdge = useCallback((edgeId: string, source: string, target: string) => {
     setLineageData(prev => ({
       ...prev,
@@ -38,7 +37,7 @@ export const useLineageData = () => {
     }));
   }, []);
 
-  // Get a node from lineage data
+
   const getNode = useCallback((nodeId: string): LineageNodeData | undefined => {
     return lineageData.nodes.get(nodeId);
   }, [lineageData.nodes]);
@@ -46,7 +45,7 @@ export const useLineageData = () => {
   // Store node positions
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
 
-  // Update node position
+  
   const updateNodePosition = useCallback((nodeId: string, position: { x: number; y: number }) => {
     setNodePositions(prev => new Map(prev).set(nodeId, position));
   }, []);
@@ -84,7 +83,7 @@ export const useLineageData = () => {
           id: { namespace: 'example', name: 'initial_dataset' },
           name: 'initial_dataset',
           namespace: 'example',
-          type: 'DB_TABLE' as const,
+          type: DatasetType.DB_TABLE,
           physicalName: 'example.initial_dataset',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -103,7 +102,6 @@ export const useLineageData = () => {
     return toReactFlowFormat(handleNodeClick);
   }, [lineageData.nodes.size, updateNode, updateNodePosition, toReactFlowFormat]);
 
-  // Create a new job node
   const createJobNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
     const jobData: LineageNodeData = {
       id,
@@ -113,7 +111,7 @@ export const useLineageData = () => {
         id: { namespace, name: '' },
         name: '',
         namespace,
-        type: 'BATCH' as const,
+        type: JobType.BATCH,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         inputs: [],
@@ -132,7 +130,6 @@ export const useLineageData = () => {
     return jobData;
   }, [updateNode, updateNodePosition]);
 
-  // Create a new dataset node
   const createDatasetNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
     const datasetData: LineageNodeData = {
       id,
@@ -142,7 +139,7 @@ export const useLineageData = () => {
         id: { namespace, name: '' },
         name: '',
         namespace,
-        type: 'DB_TABLE' as const,
+        type: DatasetType.DB_TABLE,
         physicalName: '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

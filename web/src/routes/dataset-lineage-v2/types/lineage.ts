@@ -1,6 +1,3 @@
-// Copyright 2018-2023 contributors to the Marquez project
-// SPDX-License-Identifier: Apache-2.0
-
 import type { Field, Run, Tag } from './api'
 import type { Nullable } from './Nullable'
 

@@ -15,6 +15,7 @@ import {
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { DatasetType } from '../../types/lineage';
 
 interface DatasetFormData {
   label: string;
@@ -54,7 +55,6 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
-  const isInitialDataset = selectedNodeId === 'dataset-1';
 
   useEffect(() => {
     if (selectedNodeData) {
@@ -186,8 +186,9 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
           label="Type"
           onChange={(e) => handleInputChange('type', e.target.value)}
         >
-          <MenuItem value="DB_TABLE">DB Table</MenuItem>
-          <MenuItem value="STREAM">Stream</MenuItem>
+          <MenuItem value={DatasetType.DB_TABLE}>DB Table</MenuItem>
+          <MenuItem value={DatasetType.STREAM}>Stream</MenuItem>
+          <MenuItem value={DatasetType.SERVICE}>Stream</MenuItem>
         </Select>
       </FormControl>
 
