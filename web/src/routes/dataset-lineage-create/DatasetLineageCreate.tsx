@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { Box, Button, CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Button, Alert, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import {
   ReactFlow,
   Background,
@@ -20,8 +20,8 @@ import { useDrawerState } from './useDrawerState';
 import { useLineageData } from './useLineageData';
 import { useSaveLineage } from './useSaveLineage';
 import EditForm from './EditForm';
+import Toolbar from './Toolbar';
 import { NodeType } from '../../types/lineage';
-import SaveIcon from '@mui/icons-material/Save';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {
@@ -401,23 +401,6 @@ const DatasetLineageCreateFlow: React.FC = () => {
       height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
       sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
     >
-      {/* Save Lineage Button */}
-      <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1000, display: 'flex', gap: 1 }}>
-        {hasUnsavedChanges && (
-          <Alert severity="warning" sx={{ py: 0.5, fontSize: '0.75rem' }}>
-            Unsaved changes
-          </Alert>
-        )}
-        <Button
-          variant="contained"
-          onClick={handleSaveLineage}
-          disabled={!canSaveLineage()}
-          startIcon={isSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
-          size="medium"
-        >
-          {isSaving ? 'Saving...' : 'Save Lineage'}
-        </Button>
-      </Box>
       {/* Details pane for editing node details */}
       <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
         <EditForm 
@@ -466,7 +449,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         />
       </DetailsPane>
 
-      <Box className="graph-container" sx={{ width: '100%', height: '100%' }}>
+      <Box className="graph-container" sx={{ width: '100%', height: 'calc(100% - 80px)' }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -484,6 +467,13 @@ const DatasetLineageCreateFlow: React.FC = () => {
           <MiniMap />
         </ReactFlow>
       </Box>
+
+      <Toolbar
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canSaveLineage={canSaveLineage()}
+        onSaveLineage={handleSaveLineage}
+      />
 
       {/* Validation Errors Dialog */}
       <Dialog open={showValidationErrors} onClose={() => setShowValidationErrors(false)} maxWidth="md">
