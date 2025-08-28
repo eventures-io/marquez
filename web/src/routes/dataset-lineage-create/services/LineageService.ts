@@ -1,0 +1,332 @@
+import { API_URL } from '../../../globals';
+import { genericFetchWrapper } from '../../../store/requests/index';
+import { NodeType } from '../../../types/lineage';
+
+// Service-layer types (independent of React hooks)
+export interface ServiceLineageNodeData {
+  id: string;
+  label: string;
+  type: NodeType;
+  dataset?: {
+    id: { namespace: string; name: string };
+    name: string;
+    namespace: string;
+    type: string;
+    physicalName: string;
+    createdAt: string;
+    updatedAt: string;
+    sourceName: string;
+    fields: Array<{ name: string; type: string }>;
+    facets: Record<string, any>;
+    tags: Array<{ name: string }>;
+    lastModifiedAt: string;
+    description: string;
+  };
+  job?: {
+    id: { namespace: string; name: string };
+    name: string;
+    namespace: string;
+    type: string;
+    createdAt: string;
+    updatedAt: string;
+    inputs: any[];
+    outputs: any[];
+    location: string;
+    description: string;
+    simpleName: string;
+    latestRun: any;
+    parentJobName: string | null;
+    parentJobUuid: string | null;
+    transformationCode?: string;
+  };
+}
+
+export interface ServiceLineageEdgeData {
+  source: string;
+  target: string;
+}
+
+export interface ServiceLineageData {
+  nodes: Map<string, ServiceLineageNodeData>;
+  edges: Map<string, ServiceLineageEdgeData>;
+}
+
+interface OpenLineageEvent {
+  eventType: 'START' | 'COMPLETE' | 'FAIL' | 'ABORT';
+  eventTime: string;
+  producer: string;
+  schemaURL: string;
+  job: {
+    namespace: string;
+    name: string;
+    facets?: {
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  };
+  run: {
+    runId: string;
+    facets?: Record<string, any>;
+  };
+  inputs?: Array<{
+    namespace: string;
+    name: string;
+    facets?: {
+      schema?: {
+        _producer: string;
+        _schemaURL: string;
+        fields: Array<{ name: string; type: string }>;
+      };
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  }>;
+  outputs?: Array<{
+    namespace: string;
+    name: string;
+    facets?: {
+      schema?: {
+        _producer: string;
+        _schemaURL: string;
+        fields: Array<{ name: string; type: string }>;
+      };
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  }>;
+}
+
+export class LineageService {
+  private static generateRunId(): string {
+    return `run-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  private static async createLineageEvent(event: OpenLineageEvent): Promise<any> {
+    const url = `${API_URL}/lineage`;
+    
+    try {
+      const response = await genericFetchWrapper(
+        url,
+        {
+          method: 'POST',
+          body: JSON.stringify(event),
+          headers: { 'Content-Type': 'application/json' }
+        },
+        'createLineageEvent'
+      );
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  private static getJobInputs(jobId: string, lineageData: ServiceLineageData): ServiceLineageNodeData[] {
+    const inputs: ServiceLineageNodeData[] = [];
+    
+    for (const [, edge] of lineageData.edges) {
+      if (edge.target === jobId) {
+        const sourceNode = lineageData.nodes.get(edge.source);
+        if (sourceNode && sourceNode.type === NodeType.DATASET) {
+          inputs.push(sourceNode);
+        }
+      }
+    }
+    
+    return inputs;
+  }
+
+  private static getJobOutputs(jobId: string, lineageData: ServiceLineageData): ServiceLineageNodeData[] {
+    const outputs: ServiceLineageNodeData[] = [];
+    
+    for (const [, edge] of lineageData.edges) {
+      if (edge.source === jobId) {
+        const targetNode = lineageData.nodes.get(edge.target);
+        if (targetNode && targetNode.type === NodeType.DATASET) {
+          outputs.push(targetNode);
+        }
+      }
+    }
+    
+    return outputs;
+  }
+
+  static async saveCompleteLineage(lineageData: ServiceLineageData): Promise<void> {
+    const events: OpenLineageEvent[] = [];
+    const timestamp = new Date().toISOString();
+    
+    const jobNodes = Array.from(lineageData.nodes.values())
+      .filter(node => node.type === NodeType.JOB);
+    
+    if (jobNodes.length === 0) {
+      throw new Error('No jobs found in lineage. At least one job is required.');
+    }
+    
+    for (const jobNode of jobNodes) {
+      if (!jobNode.job?.name) {
+        throw new Error(`Job ${jobNode.id} is missing required name`);
+      }
+      
+      if (!jobNode.job?.namespace) {
+        throw new Error(`Job ${jobNode.id} is missing required namespace`);
+      }
+      
+      const inputs = this.getJobInputs(jobNode.id, lineageData);
+      const outputs = this.getJobOutputs(jobNode.id, lineageData);
+      
+      for (const input of inputs) {
+        if (!input.dataset?.name) {
+          throw new Error(`Input dataset ${input.id} is missing required name`);
+        }
+        if (!input.dataset?.namespace) {
+          throw new Error(`Input dataset ${input.id} is missing required namespace`);
+        }
+      }
+      
+      for (const output of outputs) {
+        if (!output.dataset?.name) {
+          throw new Error(`Output dataset ${output.id} is missing required name`);
+        }
+        if (!output.dataset?.namespace) {
+          throw new Error(`Output dataset ${output.id} is missing required namespace`);
+        }
+      }
+      
+      const runId = this.generateRunId();
+      const jobEventData = {
+        producer: 'https://github.com/MarquezProject/marquez-ui',
+        schemaURL: 'https://openlineage.io/spec/1-0-5/OpenLineage.json',
+        job: {
+          namespace: jobNode.job.namespace,
+          name: jobNode.job.name,
+          facets: {
+            documentation: {
+              _producer: 'https://github.com/MarquezProject/marquez-ui',
+              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationJobFacet.json',
+              description: jobNode.job.description || `${jobNode.job?.name || 'Job'} created via lineage UI`
+            }
+          }
+        },
+        run: {
+          runId: runId,
+          facets: {}
+        },
+        inputs: inputs.map(dataset => ({
+          namespace: dataset.dataset!.namespace,
+          name: dataset.dataset!.name,
+          facets: {
+            schema: {
+              _producer: 'https://github.com/MarquezProject/marquez-ui',
+              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json',
+              fields: (dataset.dataset!.fields || []).map(field => ({
+                name: field.name,
+                type: field.type || 'unknown'
+              }))
+            },
+            documentation: {
+              _producer: 'https://github.com/MarquezProject/marquez-ui',
+              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationDatasetFacet.json',
+              description: dataset.dataset!.description || `${dataset.dataset?.name || 'Dataset'} dataset`
+            }
+          }
+        })),
+        outputs: outputs.map(dataset => ({
+          namespace: dataset.dataset!.namespace,
+          name: dataset.dataset!.name,
+          facets: {
+            schema: {
+              _producer: 'https://github.com/MarquezProject/marquez-ui',
+              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SchemaDatasetFacet.json',
+              fields: (dataset.dataset!.fields || []).map(field => ({
+                name: field.name,
+                type: field.type || 'unknown'
+              }))
+            },
+            documentation: {
+              _producer: 'https://github.com/MarquezProject/marquez-ui',
+              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationDatasetFacet.json',
+              description: dataset.dataset!.description || `${dataset.dataset?.name || 'Dataset'} dataset`
+            }
+          }
+        }))
+      };
+
+      events.push({
+        eventType: 'START',
+        eventTime: timestamp,
+        ...jobEventData
+      });
+
+      const completeTime = new Date(new Date(timestamp).getTime() + 1000).toISOString();
+      events.push({
+        eventType: 'COMPLETE',
+        eventTime: completeTime,
+        ...jobEventData
+      });
+    }
+    
+    for (const event of events) {
+      try {
+        await this.createLineageEvent(event);
+      } catch (error: any) {
+        const errorMessage = error?.message || error?.toString() || 'Unknown error';
+        const responseText = error?.response?.text ? await error.response.text() : 'No response text';
+        throw new Error(`Failed to save job ${event.job.namespace}:${event.job.name}: ${errorMessage}. Response: ${responseText}`);
+      }
+    }
+  }
+
+  static validateLineageForSave(lineageData: ServiceLineageData): string[] {
+    const errors: string[] = [];
+    
+    if (lineageData.nodes.size === 0) {
+      errors.push('Lineage must contain at least one node');
+      return errors;
+    }
+    
+    for (const [, nodeData] of lineageData.nodes) {
+      if (nodeData.type === NodeType.DATASET) {
+        if (!nodeData.dataset?.namespace?.trim()) {
+          errors.push(`Dataset "${nodeData.dataset?.name || nodeData.id}" is missing namespace`);
+        }
+      } else if (nodeData.type === NodeType.JOB) {
+        if (!nodeData.job?.namespace?.trim()) {
+          errors.push(`Job "${nodeData.job?.name || nodeData.id}" is missing namespace`);
+        }
+      }
+    }
+    
+    const jobCount = Array.from(lineageData.nodes.values())
+      .filter(node => node.type === NodeType.JOB).length;
+    
+    if (jobCount === 0) {
+      errors.push('Lineage must contain at least one job');
+    }
+    
+    if (lineageData.nodes.size > 1 && lineageData.edges.size === 0) {
+      errors.push('Multiple nodes must be connected with edges');
+    }
+    
+    for (const [, nodeData] of lineageData.nodes) {
+      if (nodeData.type === NodeType.DATASET) {
+        if (!nodeData.dataset?.name?.trim()) {
+          errors.push(`Dataset "${nodeData.dataset?.name || nodeData.id}" is missing name`);
+        }
+      } else if (nodeData.type === NodeType.JOB) {
+        if (!nodeData.job?.name?.trim()) {
+          errors.push(`Job "${nodeData.job?.name || nodeData.id}" is missing name`);
+        }
+      }
+    }
+    
+    return errors;
+  }
+}
