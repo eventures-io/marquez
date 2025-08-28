@@ -43,7 +43,6 @@ const EditForm: React.FC<EditFormProps> = ({
       ) : (
         <JobForm
           selectedNodeData={selectedNodeData}
-          selectedNodeId={selectedNodeId}
           onUpdate={onUpdate}
           onClose={onClose}
         />

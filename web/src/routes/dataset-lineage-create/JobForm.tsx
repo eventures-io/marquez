@@ -13,9 +13,10 @@ import {
   Typography,
   Tabs,
   Tab,
+  Alert,
 } from '@mui/material';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 interface JobFormData {
   label: string;
@@ -34,14 +35,12 @@ interface JobFormData {
 
 interface JobFormProps {
   selectedNodeData: any;
-  selectedNodeId: string | null;
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
 }
 
 const JobForm: React.FC<JobFormProps> = ({
   selectedNodeData,
-  selectedNodeId,
   onUpdate,
   onClose,
 }) => {
@@ -61,6 +60,8 @@ const JobForm: React.FC<JobFormProps> = ({
   
   const [newTag, setNewTag] = useState('');
   const [activeTab, setActiveTab] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
 
   useEffect(() => {
     if (selectedNodeData) {
@@ -98,13 +99,23 @@ const JobForm: React.FC<JobFormProps> = ({
   };
 
   const handleSave = () => {
+    setHasSubmitted(true);
+    const errors: string[] = [];
+    
     if (!formData.namespace.trim()) {
-      alert('Please provide a namespace.');
-      return;
+      errors.push('Please fill in all required fields');
     }
     
     if (!formData.name.trim()) {
-      alert('Please provide a name.');
+      errors.push('Please fill in all required fields');
+    }
+    
+    // Remove duplicates
+    const uniqueErrors = [...new Set(errors)];
+    
+    setValidationErrors(uniqueErrors);
+    
+    if (errors.length > 0) {
       return;
     }
     
@@ -141,8 +152,8 @@ const JobForm: React.FC<JobFormProps> = ({
         onChange={(e) => handleInputChange('namespace', e.target.value)}
         sx={{ mb: 2 }}
         required
-        error={!formData.namespace.trim() && formData.namespace !== ''}
-        helperText={!formData.namespace.trim() && formData.namespace !== '' ? 'Namespace is required' : 'The namespace for this job'}
+        error={hasSubmitted && !formData.namespace.trim()}
+        helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : 'The namespace for this job'}
       />
 
       <TextField
@@ -152,8 +163,8 @@ const JobForm: React.FC<JobFormProps> = ({
         onChange={(e) => handleInputChange('name', e.target.value)}
         sx={{ mb: 2 }}
         required
-        error={!formData.name.trim() && formData.name !== ''}
-        helperText={!formData.name.trim() && formData.name !== '' ? 'Name is required' : ''}
+        error={hasSubmitted && !formData.name.trim()}
+        helperText={hasSubmitted && !formData.name.trim() ? 'Name is required' : ''}
       />
 
       <TextField
@@ -200,7 +211,7 @@ const JobForm: React.FC<JobFormProps> = ({
             placeholder="Add tag"
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
           />
           <IconButton onClick={handleAddTag} size="small">
             <AddIcon />
@@ -307,7 +318,28 @@ const JobForm: React.FC<JobFormProps> = ({
         </Box>
       )}
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+      {validationErrors.length > 0 && (
+        <Box sx={{ mt: 0, mb: 0 }}>
+          {validationErrors.map((error, index) => (
+            <Alert 
+              key={index} 
+              severity="error" 
+              icon={<ErrorOutlineIcon />}
+              sx={{ 
+                backgroundColor: 'transparent',
+                color: 'white',
+                '& .MuiAlert-message': {
+                  color: 'white'
+                }
+              }}
+            >
+              {error}
+            </Alert>
+          ))}
+        </Box>
+      )}
+
+      <Box sx={{ mt: 1, display: 'flex', gap: 2 }}>
         <Button variant="contained" onClick={handleSave} fullWidth>
           Save Changes
         </Button>
