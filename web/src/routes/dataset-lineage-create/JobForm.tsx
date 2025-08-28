@@ -77,7 +77,7 @@ const JobForm: React.FC<JobFormProps> = ({
         transformationCode: entity?.transformationCode || '',
         sourceCodeLocation: entity?.sourceCodeLocation || '',
         sourceCode: entity?.sourceCode || '',
-        sql: entity?.sql || entity?.transformationCode || 'SELECT * FROM source_table;',
+        sql: entity?.sql || entity?.transformationCode || '',
         ownership: entity?.ownership || '',
       });
     }

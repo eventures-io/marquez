@@ -38,6 +38,10 @@ export interface ServiceLineageNodeData {
     parentJobName: string | null;
     parentJobUuid: string | null;
     transformationCode?: string;
+    sql?: string;
+    sourceCodeLocation?: string;
+    sourceCode?: string;
+    ownership?: string;
   };
 }
 
@@ -201,23 +205,77 @@ export class LineageService {
       }
       
       const runId = this.generateRunId();
+      
+      // Build job facets
+      const jobFacets: any = {
+        documentation: {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationJobFacet.json',
+          description: jobNode.job.description || `${jobNode.job?.name || 'Job'} created via lineage UI`
+        }
+      };
+      
+      // Add SQL facet if SQL is provided
+      const sqlQuery = (jobNode.job as any).sql;
+      if (sqlQuery && sqlQuery.trim()) {
+        jobFacets.sql = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SQLJobFacet.json',
+          query: sqlQuery.trim()
+        };
+      }
+      
+      // Build run facets
+      const runFacets: any = {};
+      
+      // Add source code location facet if provided
+      const sourceCodeLocation = (jobNode.job as any).sourceCodeLocation;
+      if (sourceCodeLocation && sourceCodeLocation.trim()) {
+        runFacets.sourceCodeLocation = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeLocationRunFacet.json',
+          type: 'git',
+          url: sourceCodeLocation.trim()
+        };
+      }
+      
+      // Add source code facet if provided (as job facet for UI display)
+      const sourceCode = (jobNode.job as any).sourceCode;
+      if (sourceCode && sourceCode.trim()) {
+        jobFacets.sourceCode = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeJobFacet.json',
+          language: 'python', // Default to python, could be made configurable
+          sourceCode: sourceCode.trim()
+        };
+      }
+      
+      // Add ownership facet if provided
+      const ownership = (jobNode.job as any).ownership;
+      if (ownership && ownership.trim()) {
+        jobFacets.ownership = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/OwnershipJobFacet.json',
+          owners: [
+            {
+              name: ownership.trim(),
+              type: 'MAINTAINER'
+            }
+          ]
+        };
+      }
+      
       const jobEventData = {
         producer: 'https://github.com/MarquezProject/marquez-ui',
         schemaURL: 'https://openlineage.io/spec/1-0-5/OpenLineage.json',
         job: {
           namespace: jobNode.job.namespace,
           name: jobNode.job.name,
-          facets: {
-            documentation: {
-              _producer: 'https://github.com/MarquezProject/marquez-ui',
-              _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationJobFacet.json',
-              description: jobNode.job.description || `${jobNode.job?.name || 'Job'} created via lineage UI`
-            }
-          }
+          facets: jobFacets
         },
         run: {
           runId: runId,
-          facets: {}
+          facets: runFacets
         },
         inputs: inputs.map(dataset => ({
           namespace: dataset.dataset!.namespace,

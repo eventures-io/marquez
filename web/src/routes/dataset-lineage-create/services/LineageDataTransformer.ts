@@ -48,7 +48,11 @@ export class LineageDataTransformer {
           latestRun: hookNode.job.latestRun,
           parentJobName: hookNode.job.parentJobName,
           parentJobUuid: hookNode.job.parentJobUuid,
-          transformationCode: (hookNode.job as any).transformationCode
+          transformationCode: (hookNode.job as any).transformationCode,
+          sql: (hookNode.job as any).sql,
+          sourceCodeLocation: (hookNode.job as any).sourceCodeLocation,
+          sourceCode: (hookNode.job as any).sourceCode,
+          ownership: (hookNode.job as any).ownership
         } : undefined
       };
       
