@@ -18,9 +18,9 @@ import TableLevelNode from '../dataset-lineage-v2/TableLevelNode';
 import DetailsPane from '../dataset-lineage-v2/DetailsPane';
 import { useDrawerState } from './useDrawerState';
 import { useLineageData } from './useLineageData';
+import { useSaveLineage } from './useSaveLineage';
 import EditForm from './EditForm';
 import { NodeType } from '../../types/lineage';
-import { saveCompleteLineage, validateLineageForSave } from '../../store/requests/lineageCreation';
 import SaveIcon from '@mui/icons-material/Save';
 import '@xyflow/react/dist/style.css';
 
@@ -34,7 +34,6 @@ const getDatasetId = () => `dataset-${nodeId++}`;
 
 const HEADER_HEIGHT = 64 + 1;
 
-// Create initial static nodes
 const createInitialNodes = (): Node[] => [
   {
     id: 'dataset-1',
@@ -44,7 +43,7 @@ const createInitialNodes = (): Node[] => [
       id: 'dataset-1',
       label: '',
       type: NodeType.DATASET,
-      onNodeClick: () => {}, // Will be replaced dynamically
+      onNodeClick: () => {},
       dataset: {
         id: { namespace: '', name: '' },
         name: '',
@@ -68,10 +67,8 @@ const DatasetLineageCreateFlow: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   
-  // Drawer state
   const { isDrawerOpen, selectedNodeId, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
   
-  // Lineage data management
   const {
     lineageData,
     updateNode,
@@ -83,24 +80,25 @@ const DatasetLineageCreateFlow: React.FC = () => {
     createDatasetNode,
   } = useLineageData();
   
-  // Initialize nodes and edges
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>(createInitialNodes());
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   
-  // Track if initial dataset is properly specified
   const [isInitialDatasetConfigured, setIsInitialDatasetConfigured] = useState(false);
   
-  // Track if first job node has been created
   const [hasCreatedFirstJob, setHasCreatedFirstJob] = useState(false);
   
-  // Save lineage state
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showValidationErrors, setShowValidationErrors] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const {
+    isSaving,
+    hasUnsavedChanges,
+    showValidationErrors,
+    validationErrors,
+    showSuccessDialog,
+    saveLineage,
+    setHasUnsavedChanges,
+    setShowValidationErrors,
+    setShowSuccessDialog,
+  } = useSaveLineage();
 
-  // Initialize once on mount
   const initializedRef = useRef(false);
   useEffect(() => {
     if (!initializedRef.current) {
@@ -190,49 +188,10 @@ const DatasetLineageCreateFlow: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Validate lineage for save
-  const validateLineage = useCallback(() => {
-    const errors = validateLineageForSave({
-      nodes: new Map(Array.from(lineageData.nodes)),
-      edges: new Map(Array.from(lineageData.edges))
-    });
-    setValidationErrors(errors);
-    return errors.length === 0;
-  }, [lineageData]);
-
-  // Handle save lineage
   const handleSaveLineage = async () => {
-    // Validate first
-    if (!validateLineage()) {
-      setShowValidationErrors(true);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await saveCompleteLineage({
-        nodes: new Map(Array.from(lineageData.nodes)),
-        edges: new Map(Array.from(lineageData.edges))
-      });
-      
-      setHasUnsavedChanges(false);
-      setShowSuccessDialog(true);
-      
-    } catch (error: any) {
-      alert(`Failed to save lineage: ${error.message}`);
-      console.error('Save lineage error:', error);
-    } finally {
-      setIsSaving(false);
-    }
+    await saveLineage(lineageData);
   };
 
-  // Get the namespace from the initial dataset
-  const getLineageNamespace = useCallback(() => {
-    const initialDatasetNode = lineageData.nodes.get('dataset-1');
-    return initialDatasetNode?.dataset?.namespace || '';
-  }, [lineageData.nodes]);
-
-  // Check if lineage can be saved
   const canSaveLineage = useCallback(() => {
     return lineageData.nodes.size > 1 && !isSaving;
   }, [lineageData.nodes.size, isSaving]);
@@ -283,7 +242,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         if (sourceNodeType === NodeType.DATASET) {
           // If source is dataset, create job node
           const id = getJobId();
-          const namespace = getLineageNamespace();
+          const namespace = '';
           
           // Mark that first job has been created
           setHasCreatedFirstJob(true);
@@ -356,7 +315,7 @@ const DatasetLineageCreateFlow: React.FC = () => {
         } else if (sourceNodeType === NodeType.JOB) {
           // If source is job, create dataset node
           const id = getDatasetId();
-          const namespace = getLineageNamespace();
+          const namespace = '';
           
           // Create new dataset node
           const newDatasetNode = {
@@ -543,14 +502,12 @@ const DatasetLineageCreateFlow: React.FC = () => {
         <DialogActions>
           <Button onClick={() => {
             setShowSuccessDialog(false);
-            // TODO: Navigate to lineage view or reset form
-            window.location.reload(); // Temporary - refresh to create new lineage
+            window.location.reload();
           }} variant="contained">
             Create New Lineage
           </Button>
           <Button onClick={() => {
             setShowSuccessDialog(false);
-            // TODO: Navigate to saved lineage view
           }}>
             View Saved Lineage
           </Button>

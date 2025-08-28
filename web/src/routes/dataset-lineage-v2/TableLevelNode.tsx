@@ -100,12 +100,14 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
       <Handle
         type="target"
         position={Position.Left}
-        isConnectable={isConnectable}
+        isConnectable={false}
         style={{ 
-          background: nodeStyle.borderColor,
+          background: '#ccc',
           width: 8,
           height: 8,
           border: '2px solid white',
+          opacity: 0.3,
+          pointerEvents: 'none',
         }}
       />
 

@@ -127,14 +127,6 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
   const events: OpenLineageEvent[] = []
   const timestamp = new Date().toISOString()
   
-  // Get namespace from initial dataset (all nodes use this namespace)
-  const initialDataset = lineageData.nodes.get('dataset-1')
-  const lineageNamespace = initialDataset?.dataset?.namespace
-  
-  if (!lineageNamespace) {
-    throw new Error('Cannot determine lineage namespace from initial dataset')
-  }
-  
   // Get all job nodes (OpenLineage is job-centric)
   const jobNodes = Array.from(lineageData.nodes.values())
     .filter(node => node.type === NodeType.JOB)
@@ -149,6 +141,10 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
       throw new Error(`Job ${jobNode.id} is missing required name`)
     }
     
+    if (!jobNode.job?.namespace) {
+      throw new Error(`Job ${jobNode.id} is missing required namespace`)
+    }
+    
     const inputs = getJobInputs(jobNode.id, lineageData)
     const outputs = getJobOutputs(jobNode.id, lineageData)
     
@@ -157,11 +153,17 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
       if (!input.dataset?.name) {
         throw new Error(`Input dataset ${input.id} is missing required name`)
       }
+      if (!input.dataset?.namespace) {
+        throw new Error(`Input dataset ${input.id} is missing required namespace`)
+      }
     }
     
     for (const output of outputs) {
       if (!output.dataset?.name) {
         throw new Error(`Output dataset ${output.id} is missing required name`)
+      }
+      if (!output.dataset?.namespace) {
+        throw new Error(`Output dataset ${output.id} is missing required namespace`)
       }
     }
     
@@ -170,7 +172,7 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
       producer: 'https://github.com/MarquezProject/marquez-ui',
       schemaURL: 'https://openlineage.io/spec/1-0-5/OpenLineage.json',
       job: {
-        namespace: lineageNamespace,
+        namespace: jobNode.job.namespace,
         name: jobNode.job.name,
         facets: {
           documentation: {
@@ -185,7 +187,7 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
         facets: {}
       },
       inputs: inputs.map(dataset => ({
-        namespace: lineageNamespace,
+        namespace: dataset.dataset!.namespace,
         name: dataset.dataset!.name,
         facets: {
           schema: {
@@ -204,7 +206,7 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
         }
       })),
       outputs: outputs.map(dataset => ({
-        namespace: lineageNamespace,
+        namespace: dataset.dataset!.namespace,
         name: dataset.dataset!.name,
         facets: {
           schema: {
@@ -246,12 +248,12 @@ export const saveCompleteLineage = async (lineageData: LineageData) => {
   for (const event of events) {
     try {
       await createLineageEvent(event)
-      console.log(`Successfully created event for job: ${lineageNamespace}:${event.job.name}`)
+      console.log(`Successfully created event for job: ${event.job.namespace}:${event.job.name}`)
     } catch (error: any) {
-      console.error(`Failed to create event for job: ${lineageNamespace}:${event.job.name}`, error)
+      console.error(`Failed to create event for job: ${event.job.namespace}:${event.job.name}`, error)
       const errorMessage = error?.message || error?.toString() || 'Unknown error'
       const responseText = error?.response?.text ? await error.response.text() : 'No response text'
-      throw new Error(`Failed to save job ${lineageNamespace}:${event.job.name}: ${errorMessage}. Response: ${responseText}`)
+      throw new Error(`Failed to save job ${event.job.namespace}:${event.job.name}: ${errorMessage}. Response: ${responseText}`)
     }
   }
   
@@ -268,12 +270,17 @@ export const validateLineageForSave = (lineageData: LineageData): string[] => {
     return errors
   }
   
-  // Get namespace from initial dataset
-  const initialDataset = lineageData.nodes.get('dataset-1')
-  let lineageNamespace = initialDataset?.dataset?.namespace
-  
-  if (!lineageNamespace || lineageNamespace.trim() === '' || lineageNamespace === 'example') {
-    errors.push('Initial dataset must have a valid namespace (not "example")')
+  // Validate that all nodes have namespaces
+  for (const [, nodeData] of lineageData.nodes) {
+    if (nodeData.type === NodeType.DATASET) {
+      if (!nodeData.dataset?.namespace?.trim()) {
+        errors.push(`Dataset "${nodeData.dataset?.name || nodeData.id}" is missing namespace`)
+      }
+    } else if (nodeData.type === NodeType.JOB) {
+      if (!nodeData.job?.namespace?.trim()) {
+        errors.push(`Job "${nodeData.job?.name || nodeData.id}" is missing namespace`)
+      }
+    }
   }
   
   // Must have at least one job
@@ -289,15 +296,9 @@ export const validateLineageForSave = (lineageData: LineageData): string[] => {
     errors.push('Multiple nodes must be connected with edges')
   }
   
-  // Validate each node
-  for (const [nodeId, nodeData] of lineageData.nodes) {
+  // Validate each node has a name
+  for (const [, nodeData] of lineageData.nodes) {
     if (nodeData.type === NodeType.DATASET) {
-      // Initial dataset needs namespace, others inherit it
-      if (nodeId === 'dataset-1') {
-        if (!nodeData.dataset?.namespace?.trim()) {
-          errors.push('Initial dataset is missing namespace')
-        }
-      }
       if (!nodeData.dataset?.name?.trim()) {
         errors.push(`Dataset "${nodeData.dataset?.name || nodeData.id}" is missing name`)
       }

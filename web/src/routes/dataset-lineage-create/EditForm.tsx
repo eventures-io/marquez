@@ -31,6 +31,7 @@ interface FormData {
   type?: string;
   tags?: string[];
   fields?: Array<{ name: string; type: string }>;
+  transformationCode?: string;
 }
 
 const EditForm: React.FC<EditFormProps> = ({
@@ -40,18 +41,18 @@ const EditForm: React.FC<EditFormProps> = ({
   onClose,
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    label: '', // Keep for compatibility but don't show in form
+    label: '',
     namespace: '',
     name: '',
     description: '',
     type: '',
     tags: [],
     fields: [],
+    transformationCode: '',
   });
   const [newTag, setNewTag] = useState('');
   const [newField, setNewField] = useState({ name: '', type: '' });
 
-  // Initialize form data when selectedNodeData changes
   useEffect(() => {
     if (selectedNodeData) {
       const isDataset = selectedNodeData.type === NodeType.DATASET;
@@ -65,6 +66,7 @@ const EditForm: React.FC<EditFormProps> = ({
         type: entity?.type || '',
         tags: entity?.tags?.map((tag: any) => tag.name || tag) || [],
         fields: entity?.fields || [],
+        transformationCode: entity?.transformationCode || (isDataset ? '' : 'SELECT * FROM source_table;'),
       });
     }
   }, [selectedNodeData]);
@@ -97,9 +99,8 @@ const EditForm: React.FC<EditFormProps> = ({
   };
 
   const handleSave = () => {
-    // Basic validation
-    if (isInitialDataset && !formData.namespace.trim()) {
-      alert('Please provide a namespace for the lineage.');
+    if (!formData.namespace.trim()) {
+      alert('Please provide a namespace.');
       return;
     }
     
@@ -110,28 +111,27 @@ const EditForm: React.FC<EditFormProps> = ({
     
     const isDataset = selectedNodeData.type === NodeType.DATASET;
     
-    // If there's a field being typed but not yet added, include it
     let fieldsToSave = [...(formData.fields || [])];
     if (isDataset && newField.name.trim() && newField.type.trim()) {
       fieldsToSave.push({ name: newField.name.trim(), type: newField.type.trim() });
     }
     
     const updatedData = {
-      label: formData.name || 'Unnamed', // Use name as label for display
+      label: formData.name || 'Unnamed',
       [isDataset ? 'dataset' : 'job']: {
         ...selectedNodeData[isDataset ? 'dataset' : 'job'],
-        ...(isInitialDataset && { namespace: formData.namespace }), // Only set namespace for initial dataset
+        namespace: formData.namespace,
         name: formData.name,
         description: formData.description,
         type: formData.type,
         tags: formData.tags?.map(tag => ({ name: tag })) || [],
         ...(isDataset && { fields: fieldsToSave }),
+        ...(!isDataset && { transformationCode: formData.transformationCode }),
       },
     };
     
     onUpdate(updatedData);
     
-    // Close the drawer after saving
     if (onClose) {
       onClose();
     }
@@ -155,16 +155,16 @@ const EditForm: React.FC<EditFormProps> = ({
       </Typography>
 
 
-      {isInitialDataset && (
-        <TextField
-          fullWidth
-          label="Namespace"
-          value={formData.namespace}
-          onChange={(e) => handleInputChange('namespace', e.target.value)}
-          sx={{ mb: 2 }}
-          helperText="All nodes in this lineage will use this namespace"
-        />
-      )}
+      <TextField
+        fullWidth
+        label="Namespace"
+        value={formData.namespace}
+        onChange={(e) => handleInputChange('namespace', e.target.value)}
+        sx={{ mb: 2 }}
+        required
+        error={!formData.namespace.trim() && formData.namespace !== ''}
+        helperText={!formData.namespace.trim() && formData.namespace !== '' ? 'Namespace is required' : 'The namespace for this node'}
+      />
 
       <TextField
         fullWidth
@@ -277,6 +277,26 @@ const EditForm: React.FC<EditFormProps> = ({
               <AddIcon />
             </IconButton>
           </Box>
+        </>
+      )}
+
+      {/* Transformation Code Section (only for jobs) */}
+      {!isDataset && (
+        <>
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Transformation Code</Typography>
+          <TextField
+            fullWidth
+            multiline
+            rows={6}
+            value={formData.transformationCode}
+            onChange={(e) => handleInputChange('transformationCode', e.target.value)}
+            placeholder="Enter SQL or transformation code..."
+            sx={{ mb: 2, fontFamily: 'monospace' }}
+            InputProps={{
+              sx: { fontFamily: 'monospace', fontSize: '0.9rem' }
+            }}
+          />
         </>
       )}
 
