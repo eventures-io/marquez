@@ -35,7 +35,7 @@ export const createTableLevelElements = (
     const downstreamNodes = findDownstreamNodes(lineageGraph, currentGraphNode);
     const upstreamNodes = findUpstreamNodes(lineageGraph, currentGraphNode);
     
-    filteredGraph = lineageGraph.graph.filter((node) => {
+    filteredGraph = lineageGraph.graph.filter((node: LineageNode) => {
       return (
         downstreamNodes.includes(node) || 
         upstreamNodes.includes(node) || 
@@ -128,7 +128,7 @@ export const findDownstreamNodes = (
   currentGraphNode: Nullable<string>
 ): LineageNode[] => {
   if (!currentGraphNode) return [];
-  const currentNode = lineageGraph.graph.find((node) => node.id === currentGraphNode);
+  const currentNode = lineageGraph.graph.find((node: LineageNode) => node.id === currentGraphNode);
   if (!currentNode) return [];
   
   const connectedNodes: LineageNode[] = [];
@@ -145,7 +145,7 @@ export const findDownstreamNodes = (
     
     queue.push(
       ...currentNode.outEdges
-        .map((edge) => lineageGraph.graph.find((n) => n.id === edge.destination))
+        .map((edge) => lineageGraph.graph.find((n: LineageNode) => n.id === edge.destination))
         .filter((item): item is LineageNode => !!item)
     );
   }
@@ -161,7 +161,7 @@ export const findUpstreamNodes = (
   currentGraphNode: Nullable<string>
 ): LineageNode[] => {
   if (!currentGraphNode) return [];
-  const currentNode = lineageGraph.graph.find((node) => node.id === currentGraphNode);
+  const currentNode = lineageGraph.graph.find((node: LineageNode) => node.id === currentGraphNode);
   if (!currentNode) return [];
   
   const connectedNodes: LineageNode[] = [];
@@ -178,7 +178,7 @@ export const findUpstreamNodes = (
     
     queue.push(
       ...currentNode.inEdges
-        .map((edge) => lineageGraph.graph.find((n) => n.id === edge.origin))
+        .map((edge) => lineageGraph.graph.find((n: LineageNode) => n.id === edge.origin))
         .filter((item): item is LineageNode => !!item)
     );
   }

@@ -21,7 +21,7 @@ import { useLineageData } from './useLineageData';
 import { useSaveLineage } from './useSaveLineage';
 import EditForm from './EditForm';
 import Toolbar from './Toolbar';
-import { NodeType, JobType, DatasetType } from '../../types/lineage';
+import { NodeType, JobType, DatasetType } from '../dataset-lineage-v2/types/lineage';
 import '@xyflow/react/dist/style.css';
 
 const nodeTypes = {

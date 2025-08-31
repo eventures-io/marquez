@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
-import { JobType } from '../../types/lineage';
+import { JobType } from '../dataset-lineage-v2/types/lineage';
 
 interface JobFormData {
   label: string;

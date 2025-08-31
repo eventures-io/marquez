@@ -51,7 +51,7 @@ export interface LineageDataset {
 
 export interface LineageJob {
   id: { namespace: string; name: string }
-  type: JobType
+  type: BatchOrStream
   name: string
   createdAt: string
   updatedAt: string

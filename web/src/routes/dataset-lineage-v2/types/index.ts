@@ -1,3 +1,18 @@
 export * from './Nullable'
 export * from './lineage'
-export * from './api'
+export type { 
+  Tag,
+  Tags,
+  Runs,
+  Namespaces,
+  Namespace,
+  Events,
+  Event,
+  Datasets,
+  Dataset,
+  DatasetVersions,
+  OpenSearchResultJobs,
+  OpenSearchResultDatasets,
+  LineageGraph,
+  Job
+} from './api'

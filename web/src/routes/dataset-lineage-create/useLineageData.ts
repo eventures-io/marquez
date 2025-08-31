@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { NodeType, JobType, DatasetType, LineageDataset, LineageJob } from '../../types/lineage';
+import { NodeType, JobType, DatasetType, LineageDataset, LineageJob } from '../dataset-lineage-v2/types/lineage';
 
 export interface LineageNodeData {
   id: string;

@@ -69,6 +69,7 @@ const JobDetailsPane: React.FC<JobDetailsPaneProps> = ({
                   <Box 
                     sx={{ 
                       backgroundColor: '#f5f5f5', 
+                      color: '#333',
                       p: 1, 
                       borderRadius: 1,
                       maxHeight: 300,

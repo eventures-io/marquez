@@ -1,6 +1,6 @@
 import { API_URL } from '../../../globals';
 import { genericFetchWrapper } from '../../../store/requests/index';
-import { NodeType, EventType } from '../../../types/lineage';
+import { NodeType, EventType } from '../../dataset-lineage-v2/types/lineage';
 
 export interface ServiceLineageNodeData {
   id: string;

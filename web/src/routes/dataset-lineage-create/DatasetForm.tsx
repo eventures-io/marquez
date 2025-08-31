@@ -188,7 +188,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         >
           <MenuItem value={DatasetType.DB_TABLE}>DB Table</MenuItem>
           <MenuItem value={DatasetType.STREAM}>Stream</MenuItem>
-          <MenuItem value={DatasetType.SERVICE}>Stream</MenuItem>
+          <MenuItem value={DatasetType.SERVICE}>Service</MenuItem>
         </Select>
       </FormControl>
 
