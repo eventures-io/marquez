@@ -118,10 +118,7 @@ const DatasetLineageEdit: React.FC = () => {
     }
 
     // Convert local lineage data to ReactFlow format (for new additions)
-    const dummyHandleNodeClick = () => { 
-      // TODO(debug): temporary logging to catch local node clicks; remove after fix
-      console.debug('[edit] dummy onNodeClick invoked') 
-    }
+    const dummyHandleNodeClick = () => {}
     const { nodes: localNodes, edges: localEdges } = (() => {
       const nodePositions = new Map<string, { x: number; y: number }>()
       
@@ -158,28 +155,27 @@ const DatasetLineageEdit: React.FC = () => {
     const allNodes = [...serverNodes]
     const allEdges = [...serverEdges]
 
-    // Add local nodes that don't conflict with server nodes
+    // Replace matching server nodes with local edits; add new locals otherwise
     localNodes.forEach(localNode => {
-      if (!allNodes.find(serverNode => serverNode.id === localNode.id)) {
+      const idx = allNodes.findIndex(serverNode => serverNode.id === localNode.id)
+      if (idx >= 0) {
+        allNodes[idx] = localNode
+      } else {
         allNodes.push(localNode)
       }
     })
 
-    // Add local edges that don't conflict with server edges  
+    // Replace matching server edges with local edits; add new locals otherwise
     localEdges.forEach(localEdge => {
-      if (!allEdges.find(serverEdge => serverEdge.id === localEdge.id)) {
+      const idx = allEdges.findIndex(serverEdge => serverEdge.id === localEdge.id)
+      if (idx >= 0) {
+        allEdges[idx] = localEdge
+      } else {
         allEdges.push(localEdge)
       }
     })
 
-    const graph = allNodes.length > 0 ? { nodes: allNodes, edges: allEdges } : null
-    // TODO(debug): temporary logging of graph composition; remove after fix
-    console.debug('[edit] graph composed', {
-      serverNodeCount: serverNodes.length,
-      localNodeCount: localNodes.length,
-      totalNodes: allNodes.length,
-    })
-    return graph
+    return allNodes.length > 0 ? { nodes: allNodes, edges: allEdges } : null
   }, [serverLineageData, currentNodeId, isCompact, isFull, collapsedNodes, localLineageData])
 
   // Handle node updates
@@ -233,11 +229,6 @@ const DatasetLineageEdit: React.FC = () => {
 
   // Handle save
   const handleSave = async () => {
-    // TODO(debug): temporary logging before save; remove after fix
-    console.debug('[edit] save requested', {
-      localNodes: Array.from(localLineageData.nodes.keys()),
-      localEdges: Array.from(localLineageData.edges.keys())
-    })
     await saveLineage(localLineageData)
   }
 
