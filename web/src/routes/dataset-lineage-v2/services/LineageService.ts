@@ -2,8 +2,6 @@ import { API_URL } from '../../../globals';
 import { genericFetchWrapper } from '../../../store/requests/index';
 import { NodeType, EventType, LineageData, LineageNodeData, OpenLineageEvent } from '@app-types';
 
-
-
 export class LineageService {
   private static generateRunId(): string {
     return `run-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -122,44 +120,8 @@ export class LineageService {
       
       // Build run facets
       const runFacets: any = {};
-      
-      // Add source code location facet if provided
-      const sourceCodeLocation = (jobNode.job as any).sourceCodeLocation;
-      if (sourceCodeLocation && sourceCodeLocation.trim()) {
-        runFacets.sourceCodeLocation = {
-          _producer: 'https://github.com/MarquezProject/marquez-ui',
-          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeLocationRunFacet.json',
-          type: 'git',
-          url: sourceCodeLocation.trim()
-        };
-      }
-      
-      // Add source code facet if provided (as job facet for UI display)
-      const sourceCode = (jobNode.job as any).sourceCode;
-      if (sourceCode && sourceCode.trim()) {
-        jobFacets.sourceCode = {
-          _producer: 'https://github.com/MarquezProject/marquez-ui',
-          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeJobFacet.json',
-          language: 'python', // Default to python, could be made configurable
-          sourceCode: sourceCode.trim()
-        };
-      }
-      
-      // Add ownership facet if provided
-      const ownership = (jobNode.job as any).ownership;
-      if (ownership && ownership.trim()) {
-        jobFacets.ownership = {
-          _producer: 'https://github.com/MarquezProject/marquez-ui',
-          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/OwnershipJobFacet.json',
-          owners: [
-            {
-              name: ownership.trim(),
-              type: 'MAINTAINER'
-            }
-          ]
-        };
-      }
-      
+
+      // Build job event
       const jobEventData = {
         producer: 'https://github.com/MarquezProject/marquez-ui',
         schemaURL: 'https://openlineage.io/spec/1-0-5/OpenLineage.json',

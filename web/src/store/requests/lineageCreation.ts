@@ -1,7 +1,5 @@
-// Copyright 2018-2024 contributors to the Marquez project
-// SPDX-License-Identifier: Apache-2.0
 
-import { LineageService } from '../../routes/dataset-lineage-create/services/LineageService';
+import { LineageService } from '../../routes/dataset-lineage-v2/services/LineageService';
 import { LineageData } from '@app-types';
 
 /**
@@ -19,4 +17,4 @@ export const validateLineageForSave = (lineageData: LineageData): string[] => {
 };
 
 // Re-export for backward compatibility if needed
-export { LineageService } from '../../routes/dataset-lineage-create/services/LineageService';
+export { LineageService } from '../../routes/dataset-lineage-v2/services/LineageService';

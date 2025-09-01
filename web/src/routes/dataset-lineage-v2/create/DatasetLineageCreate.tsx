@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { LineageMode, NodeType, DatasetType, JobType } from '@app-types'
-import { useLineageData } from './useLineageData'
-import { useSaveLineage } from './useSaveLineage'
-import TableLevelFlow from '../dataset-lineage-v2/TableLevelFlow'
+import { useLineageData } from '../useLineageData'
+import { useSaveLineage } from '../useSaveLineage'
+import TableLevelFlow from '../TableLevelFlow'
 
 // Node ID generators
 let nodeId = 2
@@ -65,9 +65,13 @@ const DatasetLineageCreateNew: React.FC = () => {
           description: ''
         }
       }
-
       updateNode('dataset-1', initialDatasetData)
-      updateNodePosition('dataset-1', { x: 50, y: 300 })
+      // Compute vertical center based on viewport (header ~65px, toolbar ~60px)
+      const header = 65
+      const toolbar = 60
+      const available = Math.max(200, window.innerHeight - header - toolbar)
+      const centerY = Math.round(available / 2)
+      updateNodePosition('dataset-1', { x: 50, y: centerY })
     }
   }, [updateNode, updateNodePosition])
 
@@ -207,6 +211,10 @@ const DatasetLineageCreateNew: React.FC = () => {
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
+      // Create mode: manual positions, left-aligned, open drawer
+      useLayout={false}
+      fitView={false}
+      initialSelectionId={'dataset-1'}
       isSaving={isSaving}
       hasUnsavedChanges={hasUnsavedChanges}
       canSaveLineage={canSaveLineage()}

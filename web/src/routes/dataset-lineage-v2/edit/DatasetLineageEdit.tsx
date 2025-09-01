@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { LineageGraph, NodeType, LineageMode } from '@app-types'
-import { getLineage } from '../../store/requests/lineage'
-import { generateNodeId } from '../../helpers/nodes'
-import { createTableLevelElements } from './tableLevelMapping'
-import { useLineageData } from '../dataset-lineage-create/useLineageData'
-import { useSaveLineage } from '../dataset-lineage-create/useSaveLineage'
-import TableLevelFlow from './TableLevelFlow'
+import { LineageGraph, NodeType, LineageMode, LineageEdgeData, LineageNodeData } from '@app-types'
+import { getLineage } from '../../../store/requests/lineage'
+import { generateNodeId } from '../../../helpers/nodes'
+import { createTableLevelElements } from '../tableLevelMapping'
+import { useLineageData } from '../useLineageData'
+import { useSaveLineage } from '../useSaveLineage'
+import TableLevelFlow from '../TableLevelFlow'
 
 const DatasetLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
@@ -123,7 +123,7 @@ const DatasetLineageEdit: React.FC = () => {
       const nodePositions = new Map<string, { x: number; y: number }>()
       
       // Get node positions from the useLineageData hook
-      const positions = Array.from(localLineageData.nodes.keys()).map(nodeId => ({
+      const positions = Array.from(localLineageData.nodes.keys()).map((nodeId: string) => ({
         id: nodeId,
         position: { x: 50, y: 300 } // This should come from the hook's position state
       }))
@@ -132,7 +132,7 @@ const DatasetLineageEdit: React.FC = () => {
         nodePositions.set(id, position)
       })
 
-      const nodes = Array.from(localLineageData.nodes.entries()).map(([id, data]) => ({
+      const nodes = Array.from(localLineageData.nodes.entries()).map(([id, data]: [string, LineageNodeData]) => ({
         id,
         type: 'tableLevel',
         position: nodePositions.get(id) || { x: 50, y: 300 },
@@ -142,7 +142,7 @@ const DatasetLineageEdit: React.FC = () => {
         },
       }))
 
-      const edges = Array.from(localLineageData.edges.values()).map(edge => ({
+      const edges = Array.from(localLineageData.edges.values()).map((edge: LineageEdgeData) => ({
         id: edge.id,
         source: edge.source,
         target: edge.target,

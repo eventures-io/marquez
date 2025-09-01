@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { useReactFlow } from '@xyflow/react';
@@ -6,8 +6,8 @@ import { TableLevelActionBar } from './TableLevelActionBar';
 import DetailsPane from './DetailsPane';
 import LineageGraph from './LineageGraph';
 import JobDetailsPane from './JobDetailsPane';
-import EditForm from '../dataset-lineage-create/EditForm';
-import Toolbar from '../dataset-lineage-create/Toolbar';
+import EditForm from './EditForm';
+import Toolbar from './Toolbar';
 import { useDrawerState } from './useDrawerState';
 import { NodeType, LineageMode, JobType, DatasetType } from '@app-types';
 import '@xyflow/react/dist/style.css';
@@ -33,6 +33,11 @@ interface TableLevelFlowProps {
   canSaveLineage?: boolean;
   loading?: boolean;
   error?: string | null;
+  // Optional: initial node selection (open drawer on mount)
+  initialSelectionId?: string;
+  // Optional: control layout/fit behavior (useful for create mode)
+  useLayout?: boolean;
+  fitView?: boolean;
 }
 
 const HEADER_HEIGHT = 64 + 1;
@@ -57,12 +62,23 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   canSaveLineage = false,
   loading = false,
   error = null,
+  initialSelectionId,
+  useLayout = true,
+  fitView = true,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Custom hooks
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
-
+  // Open drawer initially if requested
+  useEffect(() => {
+    if (initialSelectionId && lineageGraph && !isDrawerOpen) {
+      const node = lineageGraph.nodes.find((n) => n.id === initialSelectionId);
+      if (node) {
+        handleNodeClick(initialSelectionId, node.data);
+      }
+    }
+  }, [initialSelectionId, lineageGraph, isDrawerOpen, handleNodeClick]);
 
 
   return (
@@ -117,6 +133,8 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onPaneClick={handlePaneClick}
           onConnectEnd={undefined}
           onNodeCreate={mode !== LineageMode.VIEW ? onNodeCreate : undefined}
+          useLayout={useLayout}
+          fitView={fitView}
           loading={loading}
           error={error}
         />

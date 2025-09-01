@@ -10,55 +10,63 @@ import {
   FormControl,
   InputLabel,
   Divider,
+  Typography,
+  Tabs,
+  Tab,
   Alert,
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import { DatasetType } from '../../types/lineage';
+import { JobType } from './types/lineage';
 
-interface DatasetFormData {
+interface JobFormData {
   label: string;
   namespace: string;
   name: string;
   description: string;
   type: string;
   tags: string[];
-  fields: Array<{ name: string; type: string }>;
+  transformationCode: string;
+  // Facets
+  sourceCodeLocation: string;
+  sourceCode: string;
+  sql: string;
+  ownership: string;
 }
 
-interface DatasetFormProps {
+interface JobFormProps {
   selectedNodeData: any;
-  selectedNodeId: string | null;
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
 }
 
-const DatasetForm: React.FC<DatasetFormProps> = ({
+const JobForm: React.FC<JobFormProps> = ({
   selectedNodeData,
-  selectedNodeId,
   onUpdate,
   onClose,
 }) => {
-  const [formData, setFormData] = useState<DatasetFormData>({
+  const [formData, setFormData] = useState<JobFormData>({
     label: '',
     namespace: '',
     name: '',
     description: '',
     type: '',
     tags: [],
-    fields: [],
+    transformationCode: '',
+    sourceCodeLocation: '',
+    sourceCode: '',
+    sql: '',
+    ownership: '',
   });
   
   const [newTag, setNewTag] = useState('');
-  const [newField, setNewField] = useState({ name: '', type: '' });
+  const [activeTab, setActiveTab] = useState(0);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
-
   useEffect(() => {
     if (selectedNodeData) {
-      const entity = selectedNodeData.dataset;
+      const entity = selectedNodeData.job;
       
       setFormData({
         label: selectedNodeData.label || '',
@@ -67,12 +75,16 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         description: entity?.description || '',
         type: entity?.type || '',
         tags: entity?.tags?.map((tag: any) => tag.name || tag) || [],
-        fields: entity?.fields || [],
+        transformationCode: entity?.transformationCode || '',
+        sourceCodeLocation: entity?.sourceCodeLocation || '',
+        sourceCode: entity?.sourceCode || '',
+        sql: entity?.sql || entity?.transformationCode || '',
+        ownership: entity?.ownership || '',
       });
     }
   }, [selectedNodeData]);
 
-  const handleInputChange = (field: keyof DatasetFormData, value: any) => {
+  const handleInputChange = (field: keyof JobFormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -85,18 +97,6 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
 
   const handleRemoveTag = (tagToRemove: string) => {
     handleInputChange('tags', formData.tags?.filter(tag => tag !== tagToRemove) || []);
-  };
-
-  const handleAddField = () => {
-    if (newField.name.trim() && newField.type.trim()) {
-      handleInputChange('fields', [...(formData.fields || []), { ...newField }]);
-      setNewField({ name: '', type: '' });
-    }
-  };
-
-  const handleRemoveField = (index: number) => {
-    const updatedFields = formData.fields?.filter((_, i) => i !== index) || [];
-    handleInputChange('fields', updatedFields);
   };
 
   const handleSave = () => {
@@ -120,21 +120,20 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
       return;
     }
     
-    let fieldsToSave = [...(formData.fields || [])];
-    if (newField.name.trim() && newField.type.trim()) {
-      fieldsToSave.push({ name: newField.name.trim(), type: newField.type.trim() });
-    }
-    
     const updatedData = {
       label: formData.name || 'Unnamed',
-      dataset: {
-        ...selectedNodeData.dataset,
+      job: {
+        ...selectedNodeData.job,
         namespace: formData.namespace,
         name: formData.name,
         description: formData.description,
         type: formData.type,
         tags: formData.tags?.map(tag => ({ name: tag })) || [],
-        fields: fieldsToSave,
+        transformationCode: formData.transformationCode,
+        sourceCodeLocation: formData.sourceCodeLocation,
+        sourceCode: formData.sourceCode,
+        sql: formData.sql,
+        ownership: formData.ownership,
       },
     };
     
@@ -155,7 +154,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         sx={{ mb: 2 }}
         required
         error={hasSubmitted && !formData.namespace.trim()}
-        helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : 'The namespace for this dataset'}
+        helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : 'The namespace for this job'}
       />
 
       <TextField
@@ -186,15 +185,16 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
           label="Type"
           onChange={(e) => handleInputChange('type', e.target.value)}
         >
-          <MenuItem value={DatasetType.DB_TABLE}>DB Table</MenuItem>
-          <MenuItem value={DatasetType.STREAM}>Stream</MenuItem>
-          <MenuItem value={DatasetType.SERVICE}>Service</MenuItem>
+          <MenuItem value={JobType.BATCH}>Batch</MenuItem>
+          <MenuItem value={JobType.STREAM}>Stream</MenuItem>
+          <MenuItem value={JobType.SERVICE}>Service</MenuItem>
         </Select>
       </FormControl>
 
       <Divider sx={{ my: 2 }} />
 
       {/* Tags Section */}
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Tags</Typography>
       <Box sx={{ mb: 2 }}>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
           {formData.tags?.map((tag, index) => (
@@ -220,51 +220,104 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         </Box>
       </Box>
 
+      {/* Ownership Section */}
       <Divider sx={{ my: 2 }} />
+      <TextField
+        fullWidth
+        label="Ownership"
+        value={formData.ownership}
+        onChange={(e) => handleInputChange('ownership', e.target.value)}
+        sx={{ mb: 2 }}
+        placeholder="e.g., team-data-engineering"
+        helperText="Team or individual responsible for this job"
+      />
 
-      {/* Fields Section */}
-      <Box sx={{ mb: 2 }}>
-        {formData.fields?.map((field, index) => (
-          <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
-            <TextField
-              size="small"
-              value={field.name}
-              placeholder="Field name"
-              sx={{ flex: 1 }}
-              disabled
-            />
-            <TextField
-              size="small"
-              value={field.type}
-              placeholder="Field type"
-              sx={{ flex: 1 }}
-              disabled
-            />
-            <IconButton onClick={() => handleRemoveField(index)} size="small">
-              <DeleteIcon />
-            </IconButton>
-          </Box>
-        ))}
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <TextField
-            size="small"
-            placeholder="Field name"
-            value={newField.name}
-            onChange={(e) => setNewField(prev => ({ ...prev, name: e.target.value }))}
-            sx={{ flex: 1 }}
-          />
-          <TextField
-            size="small"
-            placeholder="Field type"
-            value={newField.type}
-            onChange={(e) => setNewField(prev => ({ ...prev, type: e.target.value }))}
-            sx={{ flex: 1 }}
-          />
-          <IconButton onClick={handleAddField} size="small">
-            <AddIcon />
-          </IconButton>
-        </Box>
+      {/* Transformation Section with Tabs */}
+      <Divider sx={{ my: 2 }} />
+      <Typography variant="subtitle2" sx={{ mb: 1 }}>Transformation</Typography>
+      
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={(_, newValue) => setActiveTab(newValue)}
+          aria-label="transformation type tabs"
+        >
+          <Tab label="SQL" />
+          <Tab label="Code" />
+        </Tabs>
       </Box>
+
+      {/* SQL Tab */}
+      {activeTab === 0 && (
+        <Box>
+          <TextField
+            fullWidth
+            label="SQL Query"
+            multiline
+            rows={12}
+            value={formData.sql}
+            onChange={(e) => handleInputChange('sql', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="SELECT * FROM source_table..."
+            id="sql-query-field"
+            name="sqlQuery"
+            InputProps={{
+              sx: { 
+                fontFamily: 'monospace', 
+                fontSize: '0.9rem'
+              }
+            }}
+            inputProps={{
+              style: {
+                padding: '0.5rem',
+                fontFamily: 'monospace'
+              }
+            }}
+            helperText="SQL query executed by this job"
+          />
+        </Box>
+      )}
+
+      {/* Code Tab */}
+      {activeTab === 1 && (
+        <Box>
+          <TextField
+            fullWidth
+            label="Source Code Location"
+            value={formData.sourceCodeLocation}
+            onChange={(e) => handleInputChange('sourceCodeLocation', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="e.g., https://github.com/repo/file.py"
+            helperText="URL or path to the source code"
+          />
+          
+          <TextField
+            fullWidth
+            label="Source Code"
+            multiline
+            rows={10}
+            value={formData.sourceCode}
+            onChange={(e) => handleInputChange('sourceCode', e.target.value)}
+            sx={{ mb: 2 }}
+            placeholder="def transform_data():\n    # Your code here\n    pass"
+            id="source-code-field"
+            name="sourceCode"
+            InputProps={{
+              sx: { 
+                fontFamily: 'monospace', 
+                fontSize: '0.9rem'
+              }
+            }}
+            inputProps={{
+              style: {
+                padding: '0.5rem',
+                fontFamily: 'monospace'
+              }
+            }}
+            helperText="The actual source code"
+          />
+        </Box>
+      )}
 
       {validationErrors.length > 0 && (
         <Box sx={{ mt: 0, mb: 0 }}>
@@ -296,4 +349,4 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   );
 };
 
-export default DatasetForm;
+export default JobForm;

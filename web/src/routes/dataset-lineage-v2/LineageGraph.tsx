@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Box } from '@mui/material';
 import {
   ReactFlow,
@@ -7,6 +7,12 @@ import {
   Controls,
   MiniMap,
   useReactFlow,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Node,
+  Edge,
+  Connection,
 } from '@xyflow/react';
 import TableLevelNode from './TableLevelNode';
 import { useLineageLayout } from './useLineageLayout';
@@ -22,6 +28,8 @@ interface LineageGraphProps {
   onPaneClick: () => void;
   onConnectEnd?: (event: MouseEvent | TouchEvent, connectionState: any) => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
+  useLayout?: boolean;
+  fitView?: boolean;
   loading?: boolean;
   error?: string | null;
 }
@@ -35,6 +43,8 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   onPaneClick,
   onConnectEnd,
   onNodeCreate,
+  useLayout = true,
+  fitView = true,
   loading = false,
   error = null,
 }) => {
@@ -68,11 +78,36 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   const availableHeight = window.innerHeight - HEADER_HEIGHT * 2 - 100; // Adjust for action bar
 
   // Use custom hook for layout and ReactFlow state
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useLineageLayout({
-    lineageGraph,
-    onNodeClick,
-    availableHeight,
-  });
+  // Conditionally use layout or raw positions
+  const layoutHook = useLineageLayout({ lineageGraph, onNodeClick, availableHeight });
+  const [rawNodes, setRawNodes, onRawNodesChange] = useNodesState<Node>([]);
+  const [rawEdges, setRawEdges, onRawEdgesChange] = useEdgesState<Edge>([]);
+  const onRawConnect = useCallback((params: Connection) => setRawEdges((eds) => addEdge(params, eds)), [setRawEdges]);
+
+  const nodes = useLayout ? layoutHook.nodes : rawNodes;
+  const edges = useLayout ? layoutHook.edges : rawEdges;
+  const onNodesChange = useLayout ? layoutHook.onNodesChange : onRawNodesChange;
+  const onEdgesChange = useLayout ? layoutHook.onEdgesChange : onRawEdgesChange;
+  const onConnect = useLayout ? layoutHook.onConnect : onRawConnect;
+
+  useEffect(() => {
+    if (!useLayout) {
+      if (!lineageGraph || !lineageGraph.nodes) {
+        setRawNodes([]);
+        setRawEdges([]);
+      } else {
+        const mappedNodes: Node[] = lineageGraph.nodes.map((node: any) => ({
+          ...node,
+          data: {
+            ...node.data,
+            onNodeClick: (nodeId: string) => onNodeClick(nodeId, node.data),
+          },
+        })) as unknown as Node[];
+        setRawNodes(mappedNodes);
+        setRawEdges((lineageGraph.edges || []) as Edge[]);
+      }
+    }
+  }, [useLayout, lineageGraph, setRawNodes, setRawEdges, onNodeClick]);
 
   if (loading) {
     return (
@@ -101,7 +136,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
         onConnectEnd={handleConnectEnd}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        fitView
+        fitView={fitView}
         fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
         style={{ width: '100%', height: '100%' }}
         className="react-flow"
