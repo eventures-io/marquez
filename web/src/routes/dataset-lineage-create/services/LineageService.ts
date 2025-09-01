@@ -1,112 +1,8 @@
 import { API_URL } from '../../../globals';
 import { genericFetchWrapper } from '../../../store/requests/index';
-import { NodeType, EventType } from '../../dataset-lineage-v2/types/lineage';
+import { NodeType, EventType, LineageData, LineageNodeData, OpenLineageEvent } from '@app-types';
 
-export interface ServiceLineageNodeData {
-  id: string;
-  label: string;
-  type: NodeType;
-  dataset?: {
-    id: { namespace: string; name: string };
-    name: string;
-    namespace: string;
-    type: string;
-    physicalName: string;
-    createdAt: string;
-    updatedAt: string;
-    sourceName: string;
-    fields: Array<{ name: string; type: string }>;
-    facets: Record<string, any>;
-    tags: Array<{ name: string }>;
-    lastModifiedAt: string;
-    description: string;
-  };
-  job?: {
-    id: { namespace: string; name: string };
-    name: string;
-    namespace: string;
-    type: string;
-    createdAt: string;
-    updatedAt: string;
-    inputs: any[];
-    outputs: any[];
-    location: string;
-    description: string;
-    simpleName: string;
-    latestRun: any;
-    parentJobName: string | null;
-    parentJobUuid: string | null;
-    transformationCode?: string;
-    sql?: string;
-    sourceCodeLocation?: string;
-    sourceCode?: string;
-    ownership?: string;
-  };
-}
 
-export interface ServiceLineageEdgeData {
-  source: string;
-  target: string;
-}
-
-export interface ServiceLineageData {
-  nodes: Map<string, ServiceLineageNodeData>;
-  edges: Map<string, ServiceLineageEdgeData>;
-}
-
-interface OpenLineageEvent {
-  eventType: EventType;
-  eventTime: string;
-  producer: string;
-  schemaURL: string;
-  job: {
-    namespace: string;
-    name: string;
-    facets?: {
-      documentation?: {
-        _producer: string;
-        _schemaURL: string;
-        description: string;
-      };
-    };
-  };
-  run: {
-    runId: string;
-    facets?: Record<string, any>;
-  };
-  inputs?: Array<{
-    namespace: string;
-    name: string;
-    facets?: {
-      schema?: {
-        _producer: string;
-        _schemaURL: string;
-        fields: Array<{ name: string; type: string }>;
-      };
-      documentation?: {
-        _producer: string;
-        _schemaURL: string;
-        description: string;
-      };
-    };
-  }>;
-  outputs?: Array<{
-    namespace: string;
-    name: string;
-    facets?: {
-      schema?: {
-        _producer: string;
-        _schemaURL: string;
-        fields: Array<{ name: string; type: string }>;
-      };
-      documentation?: {
-        _producer: string;
-        _schemaURL: string;
-        description: string;
-      };
-    };
-  }>;
-}
 
 export class LineageService {
   private static generateRunId(): string {
@@ -132,8 +28,8 @@ export class LineageService {
     }
   }
 
-  private static getJobInputs(jobId: string, lineageData: ServiceLineageData): ServiceLineageNodeData[] {
-    const inputs: ServiceLineageNodeData[] = [];
+  private static getJobInputs(jobId: string, lineageData: LineageData): LineageNodeData[] {
+    const inputs: LineageNodeData[] = [];
     
     for (const [, edge] of lineageData.edges) {
       if (edge.target === jobId) {
@@ -147,8 +43,8 @@ export class LineageService {
     return inputs;
   }
 
-  private static getJobOutputs(jobId: string, lineageData: ServiceLineageData): ServiceLineageNodeData[] {
-    const outputs: ServiceLineageNodeData[] = [];
+  private static getJobOutputs(jobId: string, lineageData: LineageData): LineageNodeData[] {
+    const outputs: LineageNodeData[] = [];
     
     for (const [, edge] of lineageData.edges) {
       if (edge.source === jobId) {
@@ -162,7 +58,7 @@ export class LineageService {
     return outputs;
   }
 
-  static async saveCompleteLineage(lineageData: ServiceLineageData): Promise<void> {
+  static async saveCompleteLineage(lineageData: LineageData): Promise<void> {
     const events: OpenLineageEvent[] = [];
     const timestamp = new Date().toISOString();
     
@@ -341,7 +237,7 @@ export class LineageService {
     }
   }
 
-  static validateLineageForSave(lineageData: ServiceLineageData): string[] {
+  static validateLineageForSave(lineageData: LineageData): string[] {
     const errors: string[] = [];
     
     if (lineageData.nodes.size === 0) {

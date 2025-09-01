@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { saveCompleteLineage, validateLineageForSave } from '../../store/requests/lineageCreation';
-import { LineageData } from './useLineageData';
+import { LineageData } from '@app-types';
 
 interface UseSaveLineageReturn {
   isSaving: boolean;

@@ -76,3 +76,58 @@ export interface LineageNode {
 export interface MqNode {
   data: LineageDataset | LineageJob
 }
+
+
+export interface OpenLineageEvent {
+  eventType: EventType;
+  eventTime: string;
+  producer: string;
+  schemaURL: string;
+  job: {
+    namespace: string;
+    name: string;
+    facets?: {
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  };
+  run: {
+    runId: string;
+    facets?: Record<string, any>;
+  };
+  inputs?: Array<{
+    namespace: string;
+    name: string;
+    facets?: {
+      schema?: {
+        _producer: string;
+        _schemaURL: string;
+        fields: Array<{ name: string; type: string }>;
+      };
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  }>;
+  outputs?: Array<{
+    namespace: string;
+    name: string;
+    facets?: {
+      schema?: {
+        _producer: string;
+        _schemaURL: string;
+        fields: Array<{ name: string; type: string }>;
+      };
+      documentation?: {
+        _producer: string;
+        _schemaURL: string;
+        description: string;
+      };
+    };
+  }>;
+}

@@ -1,19 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
-import { NodeType, JobType, DatasetType, LineageDataset, LineageJob } from '../dataset-lineage-v2/types/lineage';
-
-export interface LineageNodeData {
-  id: string;
-  label: string;
-  type: NodeType;
-  dataset?: LineageDataset;
-  job?: LineageJob;
-}
-
-export interface LineageData {
-  nodes: Map<string, LineageNodeData>;
-  edges: Map<string, { id: string; source: string; target: string }>;
-}
+import { LineageData, LineageNodeData, NodeType, DatasetType, JobType } from '@app-types';
 
 export const useLineageData = () => {
   const [lineageData, setLineageData] = useState<LineageData>({
