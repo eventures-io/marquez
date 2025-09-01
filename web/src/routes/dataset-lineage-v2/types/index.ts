@@ -1,6 +1,7 @@
 export * from './Nullable'
 export * from './lineage'
 export * from './graph'
+export * from './mode'
 export type { 
   Tag,
   Tags,

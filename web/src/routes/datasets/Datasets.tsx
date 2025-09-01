@@ -258,9 +258,9 @@ const Datasets: React.FC<DatasetsProps> = ({
                               link
                               linkTo={`/v2/dataset/${encodeURIComponent(
                                 dataset.id.namespace
-                              )}/${encodeURIComponent(dataset.id.name)}`}
+                              )}/${encodeURIComponent(dataset.id.name)}/edit`}
                             >
-                              VIEW
+                              EDIT
                             </MqText>
                           </TableCell>
                         </TableRow>
