@@ -67,19 +67,19 @@ export const useLineageData = () => {
         label: 'Initial Dataset',
         type: NodeType.DATASET,
         dataset: {
-          id: { namespace: 'example', name: 'initial_dataset' },
-          name: 'initial_dataset',
-          namespace: 'example',
+          id: { namespace: '', name: '' },
+          name: '',
+          namespace: '',
           type: DatasetType.DB_TABLE,
-          physicalName: 'example.initial_dataset',
+          physicalName: '',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          sourceName: 'example_source',
+          sourceName: '',
           fields: [],
           facets: {},
           tags: [],
           lastModifiedAt: new Date().toISOString(),
-          description: 'Initial dataset for lineage creation'
+          description: ''
         }
       };
 
@@ -89,7 +89,7 @@ export const useLineageData = () => {
     return toReactFlowFormat(handleNodeClick);
   }, [lineageData.nodes.size, updateNode, updateNodePosition, toReactFlowFormat]);
 
-  const createJobNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
+  const createJobNode = useCallback((id: string, position: { x: number; y: number }, namespace = '') => {
     const jobData: LineageNodeData = {
       id,
       label: '',
@@ -117,7 +117,7 @@ export const useLineageData = () => {
     return jobData;
   }, [updateNode, updateNodePosition]);
 
-  const createDatasetNode = useCallback((id: string, position: { x: number; y: number }, namespace = 'example') => {
+  const createDatasetNode = useCallback((id: string, position: { x: number; y: number }, namespace = '') => {
     const datasetData: LineageNodeData = {
       id,
       label: '',

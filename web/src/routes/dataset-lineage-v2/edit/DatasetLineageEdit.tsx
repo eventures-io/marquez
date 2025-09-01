@@ -203,7 +203,7 @@ const DatasetLineageEdit: React.FC = () => {
     const nodeId = sourceNodeType === NodeType.DATASET ? 
       `job-${Date.now()}` : `dataset-${Date.now()}`
     
-    const namespace = 'example' // This should be derived from the context
+    const namespace = '' // Namespace should be provided by the user
     
     if (sourceNodeType === NodeType.DATASET) {
       createJobNode(nodeId, position, namespace)
