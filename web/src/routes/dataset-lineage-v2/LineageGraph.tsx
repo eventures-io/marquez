@@ -50,7 +50,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
 }) => {
   const { screenToFlowPosition, getNodes } = useReactFlow();
 
-  // Enhanced onConnectEnd that can create nodes
+  // Enhanced onConnectEnd that can create nodes and auto-open drawer for the new node
   const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
     // Call the original handler if provided
     if (onConnectEnd) {
@@ -59,6 +59,9 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
 
     // Handle node creation if callback provided and connection is invalid (dropped on empty space)
     if (onNodeCreate && connectionState && !connectionState.isValid && connectionState.fromNode) {
+      // Snapshot existing node ids before creation
+      const beforeIds = new Set(getNodes().map((n) => n.id));
+
       const { clientX, clientY } = 'changedTouches' in event ? event.changedTouches[0] : event;
       
       // Convert screen coordinates to flow coordinates
@@ -79,10 +82,38 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
       }
       
       if (sourceNodeType) {
-        onNodeCreate(connectionState.fromNode.id, sourceNodeType, position);
+        const fromId = connectionState.fromNode.id;
+        onNodeCreate(fromId, sourceNodeType, position);
+
+        // Attempt to auto-select the newly created node and open the drawer
+        const maxAttempts = 10;
+        const trySelect = (attempt: number) => {
+          const nodesNow = getNodes();
+          // Find nodes that were not present before and are not the source
+          const newNodes = nodesNow.filter((n) => !beforeIds.has(n.id) && n.id !== fromId);
+          let target = newNodes[0];
+          if (newNodes.length > 1) {
+            // Prefer the one closest to the drop position
+            const dist = (n: any) => {
+              const dx = (n.position?.x ?? 0) - position.x;
+              const dy = (n.position?.y ?? 0) - position.y;
+              return Math.hypot(dx, dy);
+            };
+            target = newNodes.slice().sort((a: any, b: any) => dist(a) - dist(b))[0];
+          }
+          if (target) {
+            const data: any = (target as any).data;
+            onNodeClick(target.id, data);
+          } else if (attempt < maxAttempts) {
+            // Wait for upstream state to push the new node into ReactFlow
+            setTimeout(() => trySelect(attempt + 1), 80);
+          }
+        };
+        // Kick off selection attempts on next tick
+        setTimeout(() => trySelect(0), 0);
       }
     }
-  }, [onConnectEnd, onNodeCreate, lineageGraph, screenToFlowPosition]);
+  }, [onConnectEnd, onNodeCreate, lineageGraph, screenToFlowPosition, getNodes, onNodeClick]);
 
   // Calculate available height for layout
   const availableHeight = window.innerHeight - HEADER_HEIGHT * 2 - 100; // Adjust for action bar
