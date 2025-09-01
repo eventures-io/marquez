@@ -22,7 +22,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
       alignItems: 'center',
       padding: 2,
       borderTop: '1px solid #e0e0e0',
-      backgroundColor: '#fafafa'
+      backgroundColor: '#fff',
+      position: 'sticky',
+      bottom: 0,
+      zIndex: (theme) => theme.zIndex.appBar,
+      boxShadow: (theme) => theme.shadows[2],
     }}>
       <Box>
         {hasUnsavedChanges && (
