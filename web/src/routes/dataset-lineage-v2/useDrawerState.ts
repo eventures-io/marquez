@@ -48,12 +48,16 @@ export const useDrawerState = (): UseDrawerStateReturn => {
   }, [isDrawerOpen]);
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
+    // TODO(debug): temporary logging for drawer open; remove after fix
+    console.debug('[drawer] open', { nodeId, hasData: !!nodeData, keys: nodeData ? Object.keys(nodeData) : [] })
     setSelectedNodeId(nodeId);
     setSelectedNodeData(nodeData);
     setIsDrawerOpen(true);
   }, []);
 
   const handlePaneClick = useCallback(() => {
+    // TODO(debug): temporary logging for drawer close; remove after fix
+    console.debug('[drawer] close via pane click')
     setIsDrawerOpen(false);
     setSelectedNodeId(null);
     setSelectedNodeData(null);

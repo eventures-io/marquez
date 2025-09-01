@@ -118,7 +118,10 @@ const DatasetLineageEdit: React.FC = () => {
     }
 
     // Convert local lineage data to ReactFlow format (for new additions)
-    const dummyHandleNodeClick = () => {}
+    const dummyHandleNodeClick = () => { 
+      // TODO(debug): temporary logging to catch local node clicks; remove after fix
+      console.debug('[edit] dummy onNodeClick invoked') 
+    }
     const { nodes: localNodes, edges: localEdges } = (() => {
       const nodePositions = new Map<string, { x: number; y: number }>()
       
@@ -169,14 +172,35 @@ const DatasetLineageEdit: React.FC = () => {
       }
     })
 
-    return allNodes.length > 0 ? { nodes: allNodes, edges: allEdges } : null
+    const graph = allNodes.length > 0 ? { nodes: allNodes, edges: allEdges } : null
+    // TODO(debug): temporary logging of graph composition; remove after fix
+    console.debug('[edit] graph composed', {
+      serverNodeCount: serverNodes.length,
+      localNodeCount: localNodes.length,
+      totalNodes: allNodes.length,
+    })
+    return graph
   }, [serverLineageData, currentNodeId, isCompact, isFull, collapsedNodes, localLineageData])
 
   // Handle node updates
   const handleNodeUpdate = useCallback((nodeId: string, updatedData: any) => {
-    updateNode(nodeId, updatedData)
+    // Merge updated partial data into existing node to preserve id/type
+    const current = getNode(nodeId)
+    const inferredType = updatedData?.job ? NodeType.JOB : NodeType.DATASET
+    const merged: LineageNodeData = {
+      id: current?.id || nodeId,
+      label: updatedData?.label ?? current?.label ?? '',
+      type: current?.type ?? inferredType,
+      ...(current?.dataset || updatedData?.dataset ? {
+        dataset: { ...(current?.dataset as any), ...(updatedData?.dataset || {}) }
+      } : {}),
+      ...(current?.job || updatedData?.job ? {
+        job: { ...(current?.job as any), ...(updatedData?.job || {}) }
+      } : {}),
+    }
+    updateNode(nodeId, merged)
     setHasUnsavedChanges(true)
-  }, [updateNode, setHasUnsavedChanges])
+  }, [getNode, updateNode, setHasUnsavedChanges])
 
   // Handle node creation
   const handleNodeCreate = useCallback((sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => {
@@ -209,6 +233,11 @@ const DatasetLineageEdit: React.FC = () => {
 
   // Handle save
   const handleSave = async () => {
+    // TODO(debug): temporary logging before save; remove after fix
+    console.debug('[edit] save requested', {
+      localNodes: Array.from(localLineageData.nodes.keys()),
+      localEdges: Array.from(localLineageData.edges.keys())
+    })
     await saveLineage(localLineageData)
   }
 
