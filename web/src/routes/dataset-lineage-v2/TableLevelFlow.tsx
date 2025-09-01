@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { useReactFlow } from '@xyflow/react';
@@ -70,15 +70,17 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   
   // Custom hooks
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
-  // Open drawer initially if requested
+  // Open drawer initially if requested (only once)
+  const didAutoOpenRef = useRef(false);
   useEffect(() => {
-    if (initialSelectionId && lineageGraph && !isDrawerOpen) {
+    if (!didAutoOpenRef.current && initialSelectionId && lineageGraph) {
       const node = lineageGraph.nodes.find((n) => n.id === initialSelectionId);
       if (node) {
         handleNodeClick(initialSelectionId, node.data);
+        didAutoOpenRef.current = true;
       }
     }
-  }, [initialSelectionId, lineageGraph, isDrawerOpen, handleNodeClick]);
+  }, [initialSelectionId, lineageGraph, handleNodeClick]);
 
 
   return (
