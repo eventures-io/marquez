@@ -127,16 +127,8 @@ const DatasetLineageCreateNew: React.FC = () => {
       return
     }
 
-    const horizontalSpacing = 250 // Fixed distance between nodes
-    const sourceNode = getNode(sourceNodeId)
-    const sourcePosition = { x: 50, y: 300 } // Default position, should be derived from actual node
-
-    // Calculate position with proper spacing
-    const nodeHeight = sourceNodeType === NodeType.DATASET ? 75 : 95
-    const newPosition = {
-      x: sourcePosition.x + horizontalSpacing,
-      y: position.y - nodeHeight / 2
-    }
+    // Position is already adjusted by LineageGraph to avoid overlap
+    const newPosition = position
 
     if (sourceNodeType === NodeType.DATASET) {
       // Create job node
@@ -161,7 +153,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       const edgeId = `${sourceNodeId}-${id}`
       addLineageEdge(edgeId, sourceNodeId, id)
     }
-  }, [isInitialDatasetConfigured, getNode, createJobNode, createDatasetNode, addLineageEdge])
+  }, [isInitialDatasetConfigured, createJobNode, createDatasetNode, addLineageEdge])
 
   // Handle edge creation (called separately from node creation)
   const handleEdgeCreate = useCallback((sourceId: string, targetId: string) => {

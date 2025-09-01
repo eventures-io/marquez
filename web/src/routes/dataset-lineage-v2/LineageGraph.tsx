@@ -48,7 +48,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   loading = false,
   error = null,
 }) => {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, getNodes } = useReactFlow();
 
   // Enhanced onConnectEnd that can create nodes
   const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
@@ -64,9 +64,19 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
       // Convert screen coordinates to flow coordinates
       const position = screenToFlowPosition({ x: clientX, y: clientY });
       
-      // Find the source node type from lineage graph
+      // Find the source node type from lineage graph or live RF state
       const sourceNode = lineageGraph?.nodes?.find(node => node.id === connectionState.fromNode.id);
-      const sourceNodeType = sourceNode?.data?.type;
+      let sourceNodeType = sourceNode?.data?.type;
+      const rfNode = getNodes().find((n) => n.id === connectionState.fromNode.id);
+      if (!sourceNodeType && rfNode) {
+        sourceNodeType = (rfNode as any)?.data?.type;
+      }
+
+      // Adjust x so the new node doesn't overlap the source node
+      if (rfNode) {
+        const horizontalSpacing = 250;
+        position.x = rfNode.position.x + horizontalSpacing;
+      }
       
       if (sourceNodeType) {
         onNodeCreate(connectionState.fromNode.id, sourceNodeType, position);
