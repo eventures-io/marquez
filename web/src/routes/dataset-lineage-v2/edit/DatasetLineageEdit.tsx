@@ -19,15 +19,12 @@ const DatasetLineageEdit: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [originalNodeIds, setOriginalNodeIds] = useState<Set<string>>(new Set())
   
-  // Simple delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
   
-  // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
   
 
-  // Local state management for edits
   const {
     lineageData: localLineageData,
     nodePositions,
@@ -41,15 +38,12 @@ const DatasetLineageEdit: React.FC = () => {
     createDatasetNode,
   } = useLineageData()
 
-  // Save functionality
+
   const {
     isSaving,
     hasUnsavedChanges,
-    validationErrors,
-    showSuccessDialog,
     saveLineage,
     setHasUnsavedChanges,
-    setShowSuccessDialog,
   } = useSaveLineage()
 
   // Fetch lineage data from server and convert to local format
@@ -61,17 +55,13 @@ const DatasetLineageEdit: React.FC = () => {
     
     try {
       const serverData = await getLineage('DATASET', namespace, name, depth)
-      console.log('Fetched server data:', serverData)
       
       // Track original node IDs for deletion tracking during save
       const originalIds = new Set<string>(serverData.graph.map((node: LineageNode) => node.id))
       setOriginalNodeIds(originalIds)
-      console.log('Original node IDs from server:', Array.from(originalIds))
       
       // Use existing table level mapping to get proper positioning and edges
       const result = createTableLevelElements(serverData)
-      
-      console.log('Mapped server data to ReactFlow format:', result)
       
       // Convert the mapped ReactFlow nodes back to our local format
       result.nodes.forEach((reactFlowNode: any) => {
@@ -83,14 +73,11 @@ const DatasetLineageEdit: React.FC = () => {
           ...(reactFlowNode.data.job && { job: reactFlowNode.data.job }),
         }
         
-        console.log('Adding mapped node to local state:', reactFlowNode.id, nodeData)
         updateNode(reactFlowNode.id, nodeData)
         updateNodePosition(reactFlowNode.id, reactFlowNode.position)
       })
       
-      // Convert edges to local format
       result.edges.forEach((reactFlowEdge: any) => {
-        console.log('Adding mapped edge to local state:', reactFlowEdge.id)
         addLineageEdge(reactFlowEdge.id, reactFlowEdge.source, reactFlowEdge.target)
       })
       
@@ -102,7 +89,6 @@ const DatasetLineageEdit: React.FC = () => {
     }
   }, [namespace, name, depth, updateNode, updateNodePosition, addLineageEdge])
 
-  // Load lineage data on mount and when params change
   useEffect(() => {
     fetchLineageData()
   }, [fetchLineageData])
@@ -142,7 +128,7 @@ const DatasetLineageEdit: React.FC = () => {
     return { nodes, edges }
   }, [localLineageData, nodePositions])
 
-  // Handle node updates
+
   const handleNodeUpdate = useCallback((nodeId: string, updatedData: any) => {
     // Merge updated partial data into existing node to preserve id/type
     const current = getNode(nodeId)
@@ -162,21 +148,18 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [getNode, updateNode, setHasUnsavedChanges])
 
-  // Handle node creation
   const handleNodeCreate = useCallback((sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => {
     const nodeId = sourceNodeType === NodeType.DATASET ? 
       `job-${Date.now()}` : `dataset-${Date.now()}`
     
-    const namespace = '' // Namespace should be provided by the user
+    const namespace = '' 
     
     if (sourceNodeType === NodeType.DATASET) {
       createJobNode(nodeId, position, namespace)
-      // Create edge automatically  
       const edgeId = `${sourceNodeId}-${nodeId}`
       addLineageEdge(edgeId, sourceNodeId, nodeId)
     } else {
       createDatasetNode(nodeId, position, namespace)
-      // Create edge automatically
       const edgeId = `${sourceNodeId}-${nodeId}`
       addLineageEdge(edgeId, sourceNodeId, nodeId)
     }
@@ -184,17 +167,14 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [createJobNode, createDatasetNode, addLineageEdge, setHasUnsavedChanges])
 
-  // Handle edge creation (separate from node creation)
+  // Handle edge creation when connecting to an existing node
   const handleEdgeCreate = useCallback((sourceId: string, targetId: string) => {
     const edgeId = `${sourceId}-${targetId}`
     addLineageEdge(edgeId, sourceId, targetId)
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
-  // Handle node deletion - check if root node first
   const handleNodeDelete = useCallback((nodeId: string) => {
-    console.log('handleNodeDelete called with nodeId:', nodeId)
-    
     // Check if this would delete the entire lineage (root node)
     const preview = previewCascadeDelete(nodeId)
     const isRoot = preview.isRootNode
@@ -237,7 +217,6 @@ const DatasetLineageEdit: React.FC = () => {
       const deletedNodeIds = Array.from(originalNodeIds).filter(id => !currentNodeIds.has(id))
       
       if (deletedNodeIds.length > 0) {
-        console.log('Processing deletions for nodes:', deletedNodeIds)
         
         // We need to get the original node data to know namespace/name for deletion
         // For now, we'll need to parse the node ID format: "type:namespace:name"
@@ -250,10 +229,8 @@ const DatasetLineageEdit: React.FC = () => {
               const name = parts.slice(2).join(':') // Handle names with colons
               
               if (nodeType === 'dataset') {
-                console.log('Deleting dataset from backend:', namespace, name)
                 await deleteDataset(namespace, name)
               } else if (nodeType === 'job') {
-                console.log('Deleting job from backend:', namespace, name)
                 await deleteJob(namespace, name)
               }
             } else {

@@ -68,7 +68,6 @@ const DetailsPane = forwardRef<HTMLDivElement, DetailsPaneProps>(
         <ButtonContainer>
           {showDelete && onDelete && (
             <DeleteButton onClick={() => {
-              console.log('Delete button clicked');
               onDelete();
             }} size="small">
               DELETE

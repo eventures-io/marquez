@@ -29,9 +29,7 @@ interface TableLevelFlowProps {
   canSaveLineage?: boolean;
   loading?: boolean;
   error?: string | null;
-  // Optional: initial node selection (open drawer on mount)
   initialSelectionId?: string;
-  // Optional: control layout/fit behavior (useful for create mode)
   useLayout?: boolean;
   fitView?: boolean;
 }
@@ -58,7 +56,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   useLayout = true,
   fitView = true,
 }) => {
-  const [searchParams, setSearchParams] = useSearchParams();
+  
   
   // Custom hooks
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useDrawerState();
@@ -87,18 +85,16 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
-        {/* Details pane for node details */}
+   
         <DetailsPane 
           ref={drawerRef} 
           open={isDrawerOpen} 
           onClose={handlePaneClick}
           showDelete={mode !== LineageMode.VIEW && !!selectedNodeId}
           onDelete={() => {
-            console.log('TableLevelFlow onDelete called with selectedNodeId:', selectedNodeId);
             if (selectedNodeId && onDelete) {
-              console.log('Calling onDelete with nodeId:', selectedNodeId);
               onDelete(selectedNodeId);
-              handlePaneClick(); // Close the pane after deletion
+              handlePaneClick(); 
             }
           }}
         >
@@ -138,6 +134,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onEdgeCreate={mode !== LineageMode.VIEW ? onEdgeCreate : undefined}
           useLayout={useLayout}
           lockELKLayout={mode === LineageMode.EDIT}
+          allowConnect={mode !== LineageMode.VIEW}
           fitView={fitView}
           loading={loading}
           error={error}
@@ -154,12 +151,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onSaveLineage={onSave}
         />
       )}
-      {/* Always show toolbar in non-view modes for debugging */}
-      {mode !== LineageMode.VIEW && !onSave && (
-        <div style={{padding: '10px', background: 'red', color: 'white'}}>
-          DEBUG: Edit/Create mode but onSave is missing! Mode: {mode}
-        </div>
-      )}
+   
     </>
   );
 };

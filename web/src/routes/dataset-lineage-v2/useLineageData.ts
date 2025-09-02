@@ -18,10 +18,7 @@ export const useLineageData = () => {
   }, []);
 
   const deleteNode = useCallback((nodeId: string) => {
-    console.log('deleteNode called with nodeId:', nodeId);
-    
     setLineageData(prev => {
-      console.log('Current nodes before delete:', Array.from(prev.nodes.keys()));
       const newNodes = new Map(prev.nodes);
       const newEdges = new Map(prev.edges);
       
@@ -80,8 +77,6 @@ export const useLineageData = () => {
       // Start the cascade from the primary node
       findCascadingDeletes(nodeId);
       
-      console.log('Cascade delete will remove nodes:', Array.from(nodesToDelete));
-      
       // Remove all cascaded nodes
       for (const nodeToDelete of nodesToDelete) {
         newNodes.delete(nodeToDelete);
@@ -96,16 +91,13 @@ export const useLineageData = () => {
         }
       }
       
-      console.log('Deleted edges:', edgesToDelete);
-      console.log('Remaining nodes:', Array.from(newNodes.keys()));
-      
       return {
         nodes: newNodes,
         edges: newEdges,
       };
     });
     
-    // Clean up positions for all deleted nodes (will be handled in the next render cycle)
+    // Clean up positions for all deleted nodes 
     setNodePositions(prev => {
       const newPositions = new Map(prev);
       newPositions.delete(nodeId);
@@ -126,7 +118,7 @@ export const useLineageData = () => {
     return lineageData.nodes.get(nodeId);
   }, [lineageData.nodes]);
 
-  // Store node positions
+
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
 
   
@@ -134,7 +126,6 @@ export const useLineageData = () => {
     setNodePositions(prev => new Map(prev).set(nodeId, position));
   }, []);
 
-  // Convert lineage data to ReactFlow format
   const toReactFlowFormat = useCallback((handleNodeClick: (nodeId: string, nodeData: LineageNodeData) => void) => {
     const nodes: Node[] = Array.from(lineageData.nodes.entries()).map(([id, data]) => ({
       id,
@@ -155,7 +146,6 @@ export const useLineageData = () => {
     return { nodes, edges };
   }, [lineageData, nodePositions]);
 
-  // Initialize with default data
   const initializeWithDefaults = useCallback((handleNodeClick: (nodeId: string, nodeData: LineageNodeData) => void) => {
     // Only initialize if there are no nodes yet
     if (lineageData.nodes.size === 0) {

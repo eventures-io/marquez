@@ -15,7 +15,7 @@ const DatasetDetailsPane: React.FC<DatasetDetailsPaneProps> = ({
   const [dataset, setDataset] = useState<Dataset | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch dataset details when a dataset node is selected
+  
   useEffect(() => {
     const fetchDatasetDetails = async () => {
       if (!selectedNodeData || selectedNodeData.type !== NodeType.DATASET) {
