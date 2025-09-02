@@ -186,9 +186,14 @@ const Datasets: React.FC<DatasetsProps> = ({
                         COLUMN LINEAGE
                       </MqText>
                     </TableCell>
-                    <TableCell key={'lineage_v2'} align='left'>
+                    <TableCell key={'lineage_v2_view'} align='left'>
                       <MqText inline subheading>
-                        LINEAGE V2
+                        LINEAGE V2 VIEW
+                      </MqText>
+                    </TableCell>
+                    <TableCell key={'lineage_v2_edit'} align='left'>
+                      <MqText inline subheading>
+                        LINEAGE V2 EDIT
                       </MqText>
                     </TableCell>
                   </TableRow>
@@ -252,6 +257,16 @@ const Datasets: React.FC<DatasetsProps> = ({
                             ) : (
                               <MqText subdued>N/A</MqText>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <MqText
+                              link
+                              linkTo={`/v2/dataset/${encodeURIComponent(
+                                dataset.id.namespace
+                              )}/${encodeURIComponent(dataset.id.name)}/view`}
+                            >
+                              VIEW
+                            </MqText>
                           </TableCell>
                           <TableCell>
                             <MqText

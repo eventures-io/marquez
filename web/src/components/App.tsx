@@ -80,6 +80,10 @@ const App = (): ReactElement => {
                       element={<DatasetLineageView />} 
                     />
                     <Route 
+                      path={'/v2/dataset/:namespace/:name/view'} 
+                      element={<DatasetLineageView />} 
+                    />
+                    <Route 
                       path={'/v2/dataset/:namespace/:name/edit'} 
                       element={<DatasetLineageEdit />} 
                     />
