@@ -110,7 +110,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     if (sourceNodeType === NodeType.DATASET) {
       // Create job node
       const id = getJobId()
-      const namespace = getNode(INITIAL_DATASET_ID)?.dataset?.namespace || ''
+      const namespace = ''
       
       setHasCreatedFirstJob(true)
       createJobNode(id, newPosition, namespace)
@@ -122,7 +122,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     } else if (sourceNodeType === NodeType.JOB) {
       // Create dataset node
       const id = getDatasetId()
-      const namespace = getNode(INITIAL_DATASET_ID)?.dataset?.namespace || ''
+      const namespace = ''
       
       createDatasetNode(id, newPosition, namespace)
       
