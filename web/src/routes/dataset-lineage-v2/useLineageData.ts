@@ -183,6 +183,7 @@ export const useLineageData = () => {
 
   return {
     lineageData,
+    nodePositions,
     updateNode,
     deleteNode,
     updateNodePosition,

@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { LineageGraph, NodeType, LineageMode, LineageEdgeData, LineageNodeData } from '@app-types'
+import { NodeType, LineageMode, LineageEdgeData, LineageNodeData, LineageNode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
 import { generateNodeId } from '../../../helpers/nodes'
 import { createTableLevelElements } from '../tableLevelMapping'
@@ -13,7 +13,6 @@ const DatasetLineageEdit: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams()
   
   // State management
-  const [serverLineageData, setServerLineageData] = useState<LineageGraph | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -29,6 +28,7 @@ const DatasetLineageEdit: React.FC = () => {
   // Local state management for edits
   const {
     lineageData: localLineageData,
+    nodePositions,
     updateNode,
     deleteNode,
     updateNodePosition,
@@ -51,9 +51,7 @@ const DatasetLineageEdit: React.FC = () => {
     setShowSuccessDialog,
   } = useSaveLineage()
 
-  const initializedRef = useRef(false)
-
-  // Fetch lineage data from server
+  // Fetch lineage data from server and convert to local format
   const fetchLineageData = useCallback(async () => {
     if (!namespace || !name) return
     
@@ -61,60 +59,54 @@ const DatasetLineageEdit: React.FC = () => {
     setError(null)
     
     try {
-      const data = await getLineage('DATASET', namespace, name, depth)
-      setServerLineageData(data)
+      const serverData = await getLineage('DATASET', namespace, name, depth)
+      console.log('Fetched server data:', serverData)
+      
+      // Use existing table level mapping to get proper positioning and edges
+      const result = createTableLevelElements(
+        serverData,
+        currentNodeId,
+        isCompact,
+        isFull,
+        collapsedNodes
+      )
+      
+      console.log('Mapped server data to ReactFlow format:', result)
+      
+      // Convert the mapped ReactFlow nodes back to our local format
+      result.nodes.forEach((reactFlowNode: any) => {
+        const nodeData: LineageNodeData = {
+          id: reactFlowNode.id,
+          label: reactFlowNode.data.label || reactFlowNode.data.name || '',
+          type: reactFlowNode.data.type,
+          ...(reactFlowNode.data.dataset && { dataset: reactFlowNode.data.dataset }),
+          ...(reactFlowNode.data.job && { job: reactFlowNode.data.job }),
+        }
+        
+        console.log('Adding mapped node to local state:', reactFlowNode.id, nodeData)
+        updateNode(reactFlowNode.id, nodeData)
+        updateNodePosition(reactFlowNode.id, reactFlowNode.position)
+      })
+      
+      // Convert edges to local format
+      result.edges.forEach((reactFlowEdge: any) => {
+        console.log('Adding mapped edge to local state:', reactFlowEdge.id)
+        addLineageEdge(reactFlowEdge.id, reactFlowEdge.source, reactFlowEdge.target)
+      })
+      
     } catch (error) {
       console.error('Failed to fetch lineage:', error)
       setError('Failed to fetch lineage data')
     } finally {
       setLoading(false)
     }
-  }, [namespace, name, depth])
+  }, [namespace, name, depth, currentNodeId, isCompact, isFull, collapsedNodes, updateNode, updateNodePosition, addLineageEdge])
 
   // Load lineage data on mount and when params change
   useEffect(() => {
     fetchLineageData()
   }, [fetchLineageData])
 
-  // Initialize local state with server data
-  useEffect(() => {
-    if (serverLineageData && !initializedRef.current) {
-      initializedRef.current = true
-      
-      // Convert server data to local lineage format
-      console.log('Initializing local state with server data:', serverLineageData)
-      console.log('Server graph nodes:', serverLineageData.graph.map(n => ({ id: n.id, hasData: !!n.data })))
-      
-      // For each node in the server data, add it to local state
-      serverLineageData.graph.forEach((graphNode) => {
-        console.log('Processing server node:', graphNode.id, graphNode.data)
-        if (graphNode.data && graphNode.id) {
-          // Determine node type and convert server node data to local format
-          const isDataset = 'physicalName' in graphNode.data; // LineageDataset has physicalName
-          const nodeType = isDataset ? NodeType.DATASET : NodeType.JOB;
-          
-          const nodeData: LineageNodeData = {
-            id: graphNode.id,
-            label: graphNode.data.name || '',
-            type: nodeType,
-            ...(isDataset ? {
-              dataset: graphNode.data as any // Cast to avoid TS complexity
-            } : {
-              job: graphNode.data as any // Cast to avoid TS complexity  
-            }),
-          }
-          
-          console.log('Adding server node to local state:', graphNode.id, nodeData)
-          updateNode(graphNode.id, nodeData)
-        } else {
-          console.log('Skipping node - missing data or id:', graphNode)
-        }
-      })
-      
-      // Debug: check what's in local state after initialization
-      console.log('Initialization complete')
-    }
-  }, [serverLineageData, updateNode])
 
   // Update URL params when controls change
   useEffect(() => {
@@ -125,88 +117,32 @@ const DatasetLineageEdit: React.FC = () => {
     setSearchParams(newSearchParams)
   }, [depth, isCompact, isFull, setSearchParams])
 
-  // Map lineage data to ReactFlow format, combining server data with local additions
+  // Map local lineage data to ReactFlow format (single source of truth)
   const lineageGraph = React.useMemo(() => {
-    let serverNodes: any[] = []
-    let serverEdges: any[] = []
-
-    // Get server data if available
-    if (serverLineageData && serverLineageData.graph.length > 0) {
-      try {
-        const result = createTableLevelElements(
-          serverLineageData,
-          currentNodeId,
-          isCompact,
-          isFull,
-          collapsedNodes
-        )
-        serverNodes = result.nodes
-        serverEdges = result.edges
-      } catch (error) {
-        console.error('Error mapping lineage data:', error)
-      }
+    if (localLineageData.nodes.size === 0) {
+      return null
     }
 
-    // Convert local lineage data to ReactFlow format (for new additions)
     const dummyHandleNodeClick = () => {}
-    const { nodes: localNodes, edges: localEdges } = (() => {
-      const nodePositions = new Map<string, { x: number; y: number }>()
-      
-      // Get node positions from the useLineageData hook
-      const positions = Array.from(localLineageData.nodes.keys()).map((nodeId: string) => ({
-        id: nodeId,
-        position: { x: 50, y: 300 } // This should come from the hook's position state
-      }))
-      
-      positions.forEach(({ id, position }) => {
-        nodePositions.set(id, position)
-      })
+    
+    const nodes = Array.from(localLineageData.nodes.entries()).map(([id, data]: [string, LineageNodeData]) => ({
+      id,
+      type: 'tableLevel',
+      position: nodePositions.get(id) || { x: 50, y: 300 },
+      data: {
+        ...data,
+        onNodeClick: dummyHandleNodeClick,
+      },
+    }))
 
-      const nodes = Array.from(localLineageData.nodes.entries()).map(([id, data]: [string, LineageNodeData]) => ({
-        id,
-        type: 'tableLevel',
-        position: nodePositions.get(id) || { x: 50, y: 300 },
-        data: {
-          ...data,
-          onNodeClick: dummyHandleNodeClick,
-        },
-      }))
+    const edges = Array.from(localLineageData.edges.values()).map((edge: LineageEdgeData) => ({
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+    }))
 
-      const edges = Array.from(localLineageData.edges.values()).map((edge: LineageEdgeData) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-      }))
-
-      return { nodes, edges }
-    })()
-
-    // Merge server and local data (local data takes precedence for conflicts)
-    const allNodes = [...serverNodes]
-    const allEdges = [...serverEdges]
-
-    // Replace matching server nodes with local edits; add new locals otherwise
-    localNodes.forEach(localNode => {
-      const idx = allNodes.findIndex(serverNode => serverNode.id === localNode.id)
-      if (idx >= 0) {
-        allNodes[idx] = localNode
-      } else {
-        allNodes.push(localNode)
-      }
-    })
-
-    // Replace matching server edges with local edits; add new locals otherwise
-    localEdges.forEach(localEdge => {
-      const idx = allEdges.findIndex(serverEdge => serverEdge.id === localEdge.id)
-      if (idx >= 0) {
-        allEdges[idx] = localEdge
-      } else {
-        allEdges.push(localEdge)
-      }
-    })
-
-    return allNodes.length > 0 ? { nodes: allNodes, edges: allEdges } : null
-  }, [serverLineageData, currentNodeId, isCompact, isFull, collapsedNodes, localLineageData])
+    return { nodes, edges }
+  }, [localLineageData, nodePositions])
 
   // Handle node updates
   const handleNodeUpdate = useCallback((nodeId: string, updatedData: any) => {
