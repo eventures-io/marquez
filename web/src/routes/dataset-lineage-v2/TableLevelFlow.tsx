@@ -27,6 +27,7 @@ interface TableLevelFlowProps {
   onSave?: () => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
   onEdgeCreate?: (sourceId: string, targetId: string) => void;
+  onDelete?: (nodeId: string) => void;
   // Toolbar props for edit/create modes
   isSaving?: boolean;
   hasUnsavedChanges?: boolean;
@@ -57,6 +58,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   onSave,
   onNodeCreate,
   onEdgeCreate,
+  onDelete,
   isSaving = false,
   hasUnsavedChanges = false,
   canSaveLineage = false,
@@ -101,7 +103,20 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
         {/* Details pane for node details */}
-        <DetailsPane ref={drawerRef} open={isDrawerOpen} onClose={handlePaneClick}>
+        <DetailsPane 
+          ref={drawerRef} 
+          open={isDrawerOpen} 
+          onClose={handlePaneClick}
+          showDelete={mode !== LineageMode.VIEW && !!selectedNodeId}
+          onDelete={() => {
+            console.log('TableLevelFlow onDelete called with selectedNodeId:', selectedNodeId);
+            if (selectedNodeId && onDelete) {
+              console.log('Calling onDelete with nodeId:', selectedNodeId);
+              onDelete(selectedNodeId);
+              handlePaneClick(); // Close the pane after deletion
+            }
+          }}
+        >
           {mode === LineageMode.VIEW ? (
             <JobDetailsPane 
               selectedNodeData={selectedNodeData}

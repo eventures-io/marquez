@@ -16,6 +16,43 @@ export const useLineageData = () => {
     }));
   }, []);
 
+  const deleteNode = useCallback((nodeId: string) => {
+    console.log('deleteNode called with nodeId:', nodeId);
+    
+    setLineageData(prev => {
+      console.log('Current nodes before delete:', Array.from(prev.nodes.keys()));
+      const newNodes = new Map(prev.nodes);
+      const newEdges = new Map(prev.edges);
+      
+      // Remove the node
+      const nodeExisted = newNodes.has(nodeId);
+      newNodes.delete(nodeId);
+      console.log('Node existed:', nodeExisted, 'Remaining nodes:', Array.from(newNodes.keys()));
+      
+      // Remove all edges connected to this node
+      const edgesToDelete = [];
+      for (const [edgeId, edge] of newEdges.entries()) {
+        if (edge.source === nodeId || edge.target === nodeId) {
+          edgesToDelete.push(edgeId);
+          newEdges.delete(edgeId);
+        }
+      }
+      console.log('Deleted edges:', edgesToDelete);
+      
+      return {
+        nodes: newNodes,
+        edges: newEdges,
+      };
+    });
+    
+    // Also remove node position
+    setNodePositions(prev => {
+      const newPositions = new Map(prev);
+      newPositions.delete(nodeId);
+      return newPositions;
+    });
+  }, []);
+
 
   const addEdge = useCallback((edgeId: string, source: string, target: string) => {
     setLineageData(prev => ({
@@ -147,6 +184,7 @@ export const useLineageData = () => {
   return {
     lineageData,
     updateNode,
+    deleteNode,
     updateNodePosition,
     addEdge,
     getNode,

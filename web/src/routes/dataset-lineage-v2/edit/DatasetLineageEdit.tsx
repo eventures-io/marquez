@@ -30,6 +30,7 @@ const DatasetLineageEdit: React.FC = () => {
   const {
     lineageData: localLineageData,
     updateNode,
+    deleteNode,
     updateNodePosition,
     addEdge: addLineageEdge,
     getNode,
@@ -81,10 +82,39 @@ const DatasetLineageEdit: React.FC = () => {
       initializedRef.current = true
       
       // Convert server data to local lineage format
-      // This would need to be implemented - converting from LineageGraph to the local format
-      // For now, we'll initialize with empty state and let the user add nodes
+      console.log('Initializing local state with server data:', serverLineageData)
+      console.log('Server graph nodes:', serverLineageData.graph.map(n => ({ id: n.id, hasData: !!n.data })))
+      
+      // For each node in the server data, add it to local state
+      serverLineageData.graph.forEach((graphNode) => {
+        console.log('Processing server node:', graphNode.id, graphNode.data)
+        if (graphNode.data && graphNode.id) {
+          // Determine node type and convert server node data to local format
+          const isDataset = 'physicalName' in graphNode.data; // LineageDataset has physicalName
+          const nodeType = isDataset ? NodeType.DATASET : NodeType.JOB;
+          
+          const nodeData: LineageNodeData = {
+            id: graphNode.id,
+            label: graphNode.data.name || '',
+            type: nodeType,
+            ...(isDataset ? {
+              dataset: graphNode.data as any // Cast to avoid TS complexity
+            } : {
+              job: graphNode.data as any // Cast to avoid TS complexity  
+            }),
+          }
+          
+          console.log('Adding server node to local state:', graphNode.id, nodeData)
+          updateNode(graphNode.id, nodeData)
+        } else {
+          console.log('Skipping node - missing data or id:', graphNode)
+        }
+      })
+      
+      // Debug: check what's in local state after initialization
+      console.log('Initialization complete')
     }
-  }, [serverLineageData])
+  }, [serverLineageData, updateNode])
 
   // Update URL params when controls change
   useEffect(() => {
@@ -227,6 +257,13 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
+  // Handle node deletion
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    console.log('handleNodeDelete called with nodeId:', nodeId);
+    deleteNode(nodeId)
+    setHasUnsavedChanges(true)
+  }, [deleteNode, setHasUnsavedChanges])
+
   // Handle save
   const handleSave = async () => {
     await saveLineage(localLineageData)
@@ -254,6 +291,7 @@ const DatasetLineageEdit: React.FC = () => {
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
+      onDelete={handleNodeDelete}
       isSaving={isSaving}
       hasUnsavedChanges={hasUnsavedChanges}
       canSaveLineage={canSaveLineage()}

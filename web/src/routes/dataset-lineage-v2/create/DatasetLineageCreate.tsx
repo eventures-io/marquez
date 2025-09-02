@@ -14,6 +14,7 @@ const DatasetLineageCreateNew: React.FC = () => {
   const {
     lineageData,
     updateNode,
+    deleteNode,
     updateNodePosition,
     addEdge: addLineageEdge,
     getNode,
@@ -161,6 +162,12 @@ const DatasetLineageCreateNew: React.FC = () => {
     addLineageEdge(edgeId, sourceId, targetId)
   }, [addLineageEdge])
 
+  // Handle node deletion
+  const handleNodeDelete = useCallback((nodeId: string) => {
+    deleteNode(nodeId)
+    setHasUnsavedChanges(true)
+  }, [deleteNode, setHasUnsavedChanges])
+
   // Handle save
   const handleSave = async () => {
     await saveLineage(lineageData)
@@ -203,6 +210,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
+      onDelete={handleNodeDelete}
       // Create mode: manual positions, left-aligned, open drawer
       useLayout={false}
       fitView={false}

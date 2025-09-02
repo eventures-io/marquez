@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { styled, IconButton } from '@mui/material';
+import { styled, IconButton, Box, Button } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 interface DetailsPaneProps {
@@ -7,6 +7,8 @@ interface DetailsPaneProps {
   children: React.ReactNode;
   width?: number;
   onClose: () => void;
+  onDelete?: () => void;
+  showDelete?: boolean;
 }
 
 const StyledDetailsPane = styled('div')<{ open: boolean; width: number }>(({ theme, open, width }) => ({
@@ -24,15 +26,38 @@ const StyledDetailsPane = styled('div')<{ open: boolean; width: number }>(({ the
   overflow: 'auto',
 }));
 
-const CloseButton = styled(IconButton)(({ theme }) => ({
+const ButtonContainer = styled(Box)(({ theme }) => ({
   position: 'absolute',
   top: theme.spacing(1),
   right: theme.spacing(1),
   zIndex: 1,
+  display: 'flex',
+  gap: theme.spacing(0.5),
+}));
+
+const ActionButton = styled(IconButton)(({ theme }) => ({
+  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  '&:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
+  },
+}));
+
+const DeleteButton = styled(Button)(({ theme }) => ({
+  color: theme.palette.error.main,
+  border: `1px solid ${theme.palette.error.main}`,
+  minWidth: 'auto',
+  padding: theme.spacing(0.5, 1),
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  textTransform: 'uppercase',
+  '&:hover': {
+    backgroundColor: theme.palette.error.main,
+    color: theme.palette.error.contrastText,
+  },
 }));
 
 const DetailsPane = forwardRef<HTMLDivElement, DetailsPaneProps>(
-  ({ open, children, width = 400, onClose }, ref) => {
+  ({ open, children, width = 400, onClose, onDelete, showDelete = false }, ref) => {
     return (
       <StyledDetailsPane 
         ref={ref} 
@@ -40,9 +65,19 @@ const DetailsPane = forwardRef<HTMLDivElement, DetailsPaneProps>(
         width={width}
         onClick={(e) => e.stopPropagation()} // Prevent backdrop clicks from bubbling
       >
-        <CloseButton onClick={onClose} size="small">
-          <CloseIcon />
-        </CloseButton>
+        <ButtonContainer>
+          {showDelete && onDelete && (
+            <DeleteButton onClick={() => {
+              console.log('Delete button clicked');
+              onDelete();
+            }} size="small">
+              DELETE
+            </DeleteButton>
+          )}
+          <ActionButton onClick={onClose} size="small">
+            <CloseIcon />
+          </ActionButton>
+        </ButtonContainer>
         {children}
       </StyledDetailsPane>
     );
