@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { NodeType, LineageMode, LineageEdgeData, LineageNodeData, LineageNode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
 import { generateNodeId } from '../../../helpers/nodes'
@@ -9,10 +9,12 @@ import { deleteJob } from '../../../store/requests/jobs'
 import { useLineageData } from '../useLineageData'
 import { useSaveLineage } from '../useSaveLineage'
 import TableLevelFlow from '../TableLevelFlow'
+import DeleteWarningDialog from '../DeleteWarningDialog'
 
 const DatasetLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
   
   // State management
   const [loading, setLoading] = useState(false)
@@ -201,7 +203,7 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
-  // Handle node deletion (only local state, persistence happens on save)
+  // Handle node deletion (simple approach - just delete locally, save persists to backend)
   const handleNodeDelete = useCallback((nodeId: string) => {
     console.log('handleNodeDelete called with nodeId:', nodeId)
     deleteNode(nodeId)

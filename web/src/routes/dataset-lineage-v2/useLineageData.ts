@@ -24,50 +24,79 @@ export const useLineageData = () => {
       const newNodes = new Map(prev.nodes);
       const newEdges = new Map(prev.edges);
       
-      // Remove the primary node
-      const nodeExisted = newNodes.has(nodeId);
-      newNodes.delete(nodeId);
-      console.log('Node existed:', nodeExisted, 'Remaining nodes:', Array.from(newNodes.keys()));
+      // Recursively find all nodes that should be deleted due to cascade
+      const nodesToDelete = new Set<string>();
+      const findCascadingDeletes = (currentNodeId: string) => {
+        if (nodesToDelete.has(currentNodeId)) return;
+        
+        nodesToDelete.add(currentNodeId);
+        const node = newNodes.get(currentNodeId);
+        
+        // Find all downstream nodes (nodes that depend on this one)
+        for (const [, edge] of newEdges.entries()) {
+          if (edge.source === currentNodeId) {
+            const targetNode = newNodes.get(edge.target);
+            
+            // If this is a job node, cascade delete it and its outputs
+            if (targetNode && targetNode.type === NodeType.JOB) {
+              findCascadingDeletes(edge.target);
+            }
+            // If this is a dataset, check if it becomes orphaned
+            else if (targetNode && targetNode.type === NodeType.DATASET) {
+              // Count how many inputs this dataset will have after deletion
+              const remainingInputs = Array.from(newEdges.values()).filter(e => 
+                e.target === edge.target && !nodesToDelete.has(e.source)
+              ).length;
+              
+              // If this dataset will have no inputs left, cascade delete it
+              if (remainingInputs === 0) {
+                findCascadingDeletes(edge.target);
+              }
+            }
+          }
+        }
+        
+        // If the current node is a job, also cascade to its output datasets
+        if (node && node.type === NodeType.JOB) {
+          for (const [, edge] of newEdges.entries()) {
+            if (edge.source === currentNodeId) {
+              const targetNode = newNodes.get(edge.target);
+              if (targetNode && targetNode.type === NodeType.DATASET) {
+                // Check if this output dataset becomes orphaned
+                const remainingInputs = Array.from(newEdges.values()).filter(e => 
+                  e.target === edge.target && !nodesToDelete.has(e.source)
+                ).length;
+                
+                if (remainingInputs === 0) {
+                  findCascadingDeletes(edge.target);
+                }
+              }
+            }
+          }
+        }
+      };
       
-      // Remove all edges connected to this node and track result datasets
+      // Start the cascade from the primary node
+      findCascadingDeletes(nodeId);
+      
+      console.log('Cascade delete will remove nodes:', Array.from(nodesToDelete));
+      
+      // Remove all cascaded nodes
+      for (const nodeToDelete of nodesToDelete) {
+        newNodes.delete(nodeToDelete);
+      }
+      
+      // Remove all edges that connect to any deleted node
       const edgesToDelete = [];
-      const resultDatasets = new Set<string>(); // Only target nodes (results)
-      
       for (const [edgeId, edge] of newEdges.entries()) {
-        if (edge.source === nodeId || edge.target === nodeId) {
+        if (nodesToDelete.has(edge.source) || nodesToDelete.has(edge.target)) {
           edgesToDelete.push(edgeId);
           newEdges.delete(edgeId);
-          // Only track target nodes as potential candidates for deletion (result datasets)
-          if (edge.source === nodeId) {
-            resultDatasets.add(edge.target);
-          }
-          // Note: we do NOT add edge.source when edge.target === nodeId
-          // because those are input datasets that should remain
         }
       }
+      
       console.log('Deleted edges:', edgesToDelete);
-      console.log('Result datasets that might be orphaned:', Array.from(resultDatasets));
-      
-      // Check for orphaned result dataset nodes (nodes with no remaining connections)
-      const orphanedNodes = [];
-      for (const datasetId of resultDatasets) {
-        const hasConnections = Array.from(newEdges.values()).some(edge => 
-          edge.source === datasetId || edge.target === datasetId
-        );
-        
-        if (!hasConnections) {
-          const node = newNodes.get(datasetId);
-          // Only auto-delete dataset nodes that were results of the deleted job
-          if (node && node.type === NodeType.DATASET) {
-            orphanedNodes.push(datasetId);
-            newNodes.delete(datasetId);
-          }
-        }
-      }
-      
-      if (orphanedNodes.length > 0) {
-        console.log('Deleted orphaned result dataset nodes:', orphanedNodes);
-      }
+      console.log('Remaining nodes:', Array.from(newNodes.keys()));
       
       return {
         nodes: newNodes,
@@ -75,7 +104,7 @@ export const useLineageData = () => {
       };
     });
     
-    // Clean up positions for the primary node (orphaned positions will be cleaned up on next render)
+    // Clean up positions for all deleted nodes (will be handled in the next render cycle)
     setNodePositions(prev => {
       const newPositions = new Map(prev);
       newPositions.delete(nodeId);
@@ -211,6 +240,80 @@ export const useLineageData = () => {
     return datasetData;
   }, [updateNode, updateNodePosition]);
 
+  // Preview what nodes would be deleted by cascading
+  const previewCascadeDelete = useCallback((nodeId: string): { isRootNode: boolean; cascadeNodes: Array<{ id: string; name: string; type: string }> } => {
+    const nodesToDelete = new Set<string>();
+    const findCascadingDeletes = (currentNodeId: string) => {
+      if (nodesToDelete.has(currentNodeId)) return;
+      
+      nodesToDelete.add(currentNodeId);
+      const node = lineageData.nodes.get(currentNodeId);
+      
+      // Find all downstream nodes (nodes that depend on this one)
+      for (const [, edge] of lineageData.edges.entries()) {
+        if (edge.source === currentNodeId) {
+          const targetNode = lineageData.nodes.get(edge.target);
+          
+          // If this is a job node, cascade delete it and its outputs
+          if (targetNode && targetNode.type === NodeType.JOB) {
+            findCascadingDeletes(edge.target);
+          }
+          // If this is a dataset, check if it becomes orphaned
+          else if (targetNode && targetNode.type === NodeType.DATASET) {
+            // Count how many inputs this dataset will have after deletion
+            const remainingInputs = Array.from(lineageData.edges.values()).filter(e => 
+              e.target === edge.target && !nodesToDelete.has(e.source)
+            ).length;
+            
+            // If this dataset will have no inputs left, cascade delete it
+            if (remainingInputs === 0) {
+              findCascadingDeletes(edge.target);
+            }
+          }
+        }
+      }
+      
+      // If the current node is a job, also cascade to its output datasets
+      if (node && node.type === NodeType.JOB) {
+        for (const [, edge] of lineageData.edges.entries()) {
+          if (edge.source === currentNodeId) {
+            const targetNode = lineageData.nodes.get(edge.target);
+            if (targetNode && targetNode.type === NodeType.DATASET) {
+              // Check if this output dataset becomes orphaned
+              const remainingInputs = Array.from(lineageData.edges.values()).filter(e => 
+                e.target === edge.target && !nodesToDelete.has(e.source)
+              ).length;
+              
+              if (remainingInputs === 0) {
+                findCascadingDeletes(edge.target);
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    findCascadingDeletes(nodeId);
+    
+    // Remove the primary node from cascade list
+    nodesToDelete.delete(nodeId);
+    
+    // Check if this is a root node (would delete everything)
+    const isRootNode = nodesToDelete.size + 1 === lineageData.nodes.size;
+    
+    // Build cascade node info
+    const cascadeNodes = Array.from(nodesToDelete).map(id => {
+      const node = lineageData.nodes.get(id);
+      return {
+        id,
+        name: node?.label || node?.dataset?.name || node?.job?.name || id,
+        type: node?.type || 'UNKNOWN'
+      };
+    });
+    
+    return { isRootNode, cascadeNodes };
+  }, [lineageData]);
+
   return {
     lineageData,
     nodePositions,
@@ -219,6 +322,7 @@ export const useLineageData = () => {
     updateNodePosition,
     addEdge,
     getNode,
+    previewCascadeDelete,
     toReactFlowFormat,
     initializeWithDefaults,
     createJobNode,
