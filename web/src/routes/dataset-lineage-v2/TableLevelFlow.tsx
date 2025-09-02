@@ -152,6 +152,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onNodeCreate={mode !== LineageMode.VIEW ? onNodeCreate : undefined}
           onEdgeCreate={mode !== LineageMode.VIEW ? onEdgeCreate : undefined}
           useLayout={useLayout}
+          lockELKLayout={mode === LineageMode.EDIT}
           fitView={fitView}
           loading={loading}
           error={error}

@@ -33,6 +33,7 @@ interface LineageGraphProps {
   fitView?: boolean;
   loading?: boolean;
   error?: string | null;
+  lockELKLayout?: boolean;
 }
 
 const HEADER_HEIGHT = 64 + 1;
@@ -49,6 +50,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   fitView = true,
   loading = false,
   error = null,
+  lockELKLayout = false,
 }) => {
   const { screenToFlowPosition, getNodes } = useReactFlow();
 
@@ -122,7 +124,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
 
   // Use custom hook for layout and ReactFlow state
   // Conditionally use layout or raw positions
-  const layoutHook = useLineageLayout({ lineageGraph, onNodeClick, availableHeight });
+  const layoutHook = useLineageLayout({ lineageGraph, onNodeClick, availableHeight, lockELKLayout });
   const [rawNodes, setRawNodes, onRawNodesChange] = useNodesState<Node>([]);
   const [rawEdges, setRawEdges, onRawEdgesChange] = useEdgesState<Edge>([]);
   const onRawConnect = useCallback((params: Connection) => setRawEdges((eds) => addEdge(params, eds)), [setRawEdges]);
