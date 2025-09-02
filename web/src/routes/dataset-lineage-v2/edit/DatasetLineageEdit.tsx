@@ -21,6 +21,11 @@ const DatasetLineageEdit: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [originalNodeIds, setOriginalNodeIds] = useState<Set<string>>(new Set())
   
+  // Simple delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
+  const [isRootNodeDelete, setIsRootNodeDelete] = useState(false)
+  
   // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
   const [isCompact, setIsCompact] = useState(searchParams.get('isCompact') === 'true')
@@ -39,6 +44,7 @@ const DatasetLineageEdit: React.FC = () => {
     updateNodePosition,
     addEdge: addLineageEdge,
     getNode,
+    previewCascadeDelete,
     createJobNode,
     createDatasetNode,
   } = useLineageData()
@@ -203,12 +209,46 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
-  // Handle node deletion (simple approach - just delete locally, save persists to backend)
+  // Handle node deletion - check if root node first
   const handleNodeDelete = useCallback((nodeId: string) => {
     console.log('handleNodeDelete called with nodeId:', nodeId)
-    deleteNode(nodeId)
-    setHasUnsavedChanges(true) // Mark as having changes to be saved
-  }, [deleteNode, setHasUnsavedChanges])
+    
+    // Check if this would delete the entire lineage (root node)
+    const preview = previewCascadeDelete(nodeId)
+    const isRoot = preview.isRootNode
+    
+    if (isRoot) {
+      // Show warning dialog for root node deletion
+      setPendingDeleteNodeId(nodeId)
+      setIsRootNodeDelete(true)
+      setDeleteDialogOpen(true)
+    } else {
+      // Regular deletion - just delete immediately
+      deleteNode(nodeId)
+      setHasUnsavedChanges(true)
+    }
+  }, [previewCascadeDelete, deleteNode, setHasUnsavedChanges])
+
+  // Handle confirmed deletion from dialog
+  const handleConfirmDelete = useCallback(() => {
+    if (!pendingDeleteNodeId) return
+    
+    // Perform the deletion
+    deleteNode(pendingDeleteNodeId)
+    setHasUnsavedChanges(true)
+    
+    // Close dialog
+    setDeleteDialogOpen(false)
+    setPendingDeleteNodeId(null)
+    setIsRootNodeDelete(false)
+  }, [pendingDeleteNodeId, deleteNode, setHasUnsavedChanges])
+
+  // Handle cancel delete
+  const handleCancelDelete = useCallback(() => {
+    setDeleteDialogOpen(false)
+    setPendingDeleteNodeId(null)
+    setIsRootNodeDelete(false)
+  }, [])
 
   // Handle save with deletion tracking
   const handleSave = async () => {
@@ -266,29 +306,45 @@ const DatasetLineageEdit: React.FC = () => {
     return !isSaving
   }, [isSaving])
 
+  // Get pending delete node info for dialog
+  const pendingDeleteNode = pendingDeleteNodeId ? getNode(pendingDeleteNodeId) : null
+
   return (
-    <TableLevelFlow 
-      mode={LineageMode.EDIT}
-      lineageGraph={lineageGraph}
-      nodeType={NodeType.DATASET}
-      depth={depth}
-      setDepth={setDepth}
-      isCompact={isCompact}
-      setIsCompact={setIsCompact}
-      isFull={isFull}
-      setIsFull={setIsFull}
-      onRefresh={fetchLineageData}
-      onUpdate={handleNodeUpdate}
-      onSave={handleSave}
-      onNodeCreate={handleNodeCreate}
-      onEdgeCreate={handleEdgeCreate}
-      onDelete={handleNodeDelete}
-      isSaving={isSaving}
-      hasUnsavedChanges={hasUnsavedChanges}
-      canSaveLineage={canSaveLineage()}
-      loading={loading}
-      error={error}
-    />
+    <>
+      <TableLevelFlow 
+        mode={LineageMode.EDIT}
+        lineageGraph={lineageGraph}
+        nodeType={NodeType.DATASET}
+        depth={depth}
+        setDepth={setDepth}
+        isCompact={isCompact}
+        setIsCompact={setIsCompact}
+        isFull={isFull}
+        setIsFull={setIsFull}
+        onRefresh={fetchLineageData}
+        onUpdate={handleNodeUpdate}
+        onSave={handleSave}
+        onNodeCreate={handleNodeCreate}
+        onEdgeCreate={handleEdgeCreate}
+        onDelete={handleNodeDelete}
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canSaveLineage={canSaveLineage()}
+        loading={loading}
+        error={error}
+      />
+
+      {/* Simple Delete Warning Dialog */}
+      {pendingDeleteNode && (
+        <DeleteWarningDialog
+          open={deleteDialogOpen}
+          onClose={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+          nodeName={pendingDeleteNode.label || pendingDeleteNode.dataset?.name || pendingDeleteNode.job?.name || 'Unknown'}
+          nodeType={pendingDeleteNode.type || 'UNKNOWN'}
+        />
+      )}
+    </>
   )
 }
 
