@@ -22,6 +22,7 @@ interface TableLevelFlowProps {
   onSave?: () => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
   onEdgeCreate?: (sourceId: string, targetId: string) => void;
+  onEdgeDelete?: (edgeId: string) => void;
   onDelete?: (nodeId: string) => void;
   // Toolbar props for edit/create modes
   isSaving?: boolean;
@@ -46,6 +47,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   onSave,
   onNodeCreate,
   onEdgeCreate,
+  onEdgeDelete,
   onDelete,
   isSaving = false,
   hasUnsavedChanges = false,
@@ -132,6 +134,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onConnectEnd={undefined}
           onNodeCreate={mode !== LineageMode.VIEW ? onNodeCreate : undefined}
           onEdgeCreate={mode !== LineageMode.VIEW ? onEdgeCreate : undefined}
+          onEdgeDelete={mode !== LineageMode.VIEW ? onEdgeDelete : undefined}
           useLayout={useLayout}
           lockELKLayout={mode === LineageMode.EDIT}
           allowConnect={mode !== LineageMode.VIEW}

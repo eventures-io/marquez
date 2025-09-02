@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Box } from '@mui/material';
 import {
   ReactFlow,
@@ -30,6 +30,7 @@ interface LineageGraphProps {
   onConnectEnd?: (event: MouseEvent | TouchEvent, connectionState: any) => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
   onEdgeCreate?: (sourceId: string, targetId: string) => void;
+  onEdgeDelete?: (edgeId: string) => void;
   useLayout?: boolean;
   fitView?: boolean;
   loading?: boolean;
@@ -47,6 +48,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   onConnectEnd,
   onNodeCreate,
   onEdgeCreate,
+  onEdgeDelete,
   useLayout = true,
   fitView = true,
   loading = false,
@@ -55,6 +57,25 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   allowConnect = true,
 }) => {
   const { screenToFlowPosition, getNodes } = useReactFlow();
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+  const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(edge.id);
+  }, []);
+
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (selectedEdgeId && onEdgeDelete) {
+        onEdgeDelete(selectedEdgeId);
+        setSelectedEdgeId(null);
+      }
+    }
+  }, [selectedEdgeId, onEdgeDelete]);
+
+  const handlePaneClick = useCallback(() => {
+    setSelectedEdgeId(null);
+    onPaneClick();
+  }, [onPaneClick]);
 
 
   const handleConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
@@ -131,7 +152,17 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   const onRawConnect = useCallback((params: Connection) => setRawEdges((eds) => addEdge(params, eds)), [setRawEdges]);
 
   const nodes = useLayout ? layoutHook.nodes : rawNodes;
-  const edges = useLayout ? layoutHook.edges : rawEdges;
+  const rawEdgesWithSelection = useLayout ? layoutHook.edges : rawEdges;
+  const edges = rawEdgesWithSelection.map(edge => ({
+    ...edge,
+    style: {
+      ...edge.style,
+      ...(selectedEdgeId === edge.id && {
+        filter: 'drop-shadow(0px 0px 2px rgba(128, 128, 128, 0.5))',
+        strokeWidth: 2,
+      }),
+    },
+  }));
   const onNodesChange = useLayout ? layoutHook.onNodesChange : onRawNodesChange;
   const onEdgesChange = useLayout ? layoutHook.onEdgesChange : onRawEdgesChange;
 
@@ -182,6 +213,17 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
     }
   }, [useLayout, lineageGraph, setRawNodes, setRawEdges, onNodeClick]);
 
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      handleKeyDown(event);
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [handleKeyDown]);
+
   if (loading) {
     return (
       <Box height="100%" display="flex" alignItems="center" justifyContent="center">
@@ -207,7 +249,8 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
         onEdgesChange={onEdgesChange}
         onConnect={handleConnect}
         onConnectEnd={handleConnectEnd}
-        onPaneClick={onPaneClick}
+        onPaneClick={handlePaneClick}
+        onEdgeClick={handleEdgeClick}
         nodeTypes={nodeTypes}
         fitView={fitView}
         fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}

@@ -32,6 +32,7 @@ const DatasetLineageEdit: React.FC = () => {
     deleteNode,
     updateNodePosition,
     addEdge: addLineageEdge,
+    deleteEdge,
     getNode,
     previewCascadeDelete,
     createJobNode,
@@ -174,6 +175,11 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
+  const handleEdgeDelete = useCallback((edgeId: string) => {
+    deleteEdge(edgeId)
+    setHasUnsavedChanges(true)
+  }, [deleteEdge, setHasUnsavedChanges])
+
   const handleNodeDelete = useCallback((nodeId: string) => {
     // Check if this would delete the entire lineage (root node)
     const preview = previewCascadeDelete(nodeId)
@@ -276,6 +282,7 @@ const DatasetLineageEdit: React.FC = () => {
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
+      onEdgeDelete={handleEdgeDelete}
       onDelete={handleNodeDelete}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}

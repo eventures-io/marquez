@@ -113,6 +113,17 @@ export const useLineageData = () => {
     }));
   }, []);
 
+  const deleteEdge = useCallback((edgeId: string) => {
+    setLineageData(prev => {
+      const newEdges = new Map(prev.edges);
+      newEdges.delete(edgeId);
+      return {
+        ...prev,
+        edges: newEdges,
+      };
+    });
+  }, []);
+
 
   const getNode = useCallback((nodeId: string): LineageNodeData | undefined => {
     return lineageData.nodes.get(nodeId);
@@ -312,6 +323,7 @@ export const useLineageData = () => {
     deleteNode,
     updateNodePosition,
     addEdge,
+    deleteEdge,
     getNode,
     previewCascadeDelete,
     toReactFlowFormat,

@@ -18,6 +18,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     deleteNode,
     updateNodePosition,
     addEdge: addLineageEdge,
+    deleteEdge,
     getNode,
     toReactFlowFormat,
     createJobNode,
@@ -136,6 +137,11 @@ const DatasetLineageCreateNew: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [deleteNode, setHasUnsavedChanges])
 
+  const handleEdgeDelete = useCallback((edgeId: string) => {
+    deleteEdge(edgeId)
+    setHasUnsavedChanges(true)
+  }, [deleteEdge, setHasUnsavedChanges])
+
 
   const handleSave = async () => {
     await saveLineage(lineageData)
@@ -173,6 +179,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
+      onEdgeDelete={handleEdgeDelete}
       onDelete={handleNodeDelete}
       useLayout={false}
       fitView={false}
