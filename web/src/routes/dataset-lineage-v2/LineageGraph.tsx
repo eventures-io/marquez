@@ -17,6 +17,7 @@ import {
 import TableLevelNode from './TableLevelNode';
 import { useLineageLayout } from './useLineageLayout';
 import { NodeType } from '@app-types';
+import { computeNodeStyleFromData } from './helpers/computeNodeStyle';
 
 const nodeTypes = {
   tableLevel: TableLevelNode,
@@ -79,10 +80,12 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
         sourceNodeType = (rfNode as any)?.data?.type;
       }
 
-      // Adjust x so the new node doesn't overlap the source node
-      if (rfNode) {
-        const horizontalSpacing = 250;
-        position.x = rfNode.position.x + horizontalSpacing;
+      // Respect user drop position: center the new node at drop point
+      if (sourceNodeType) {
+        const newNodeType = sourceNodeType === NodeType.DATASET ? NodeType.JOB : NodeType.DATASET;
+        const dims = computeNodeStyleFromData({ type: newNodeType, dataset: newNodeType === NodeType.DATASET ? { fields: [] } : undefined });
+        position.x = position.x - dims.width / 2;
+        position.y = position.y - dims.height;
       }
       
       if (sourceNodeType) {

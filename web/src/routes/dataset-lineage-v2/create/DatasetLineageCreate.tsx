@@ -3,14 +3,15 @@ import { LineageMode, NodeType, DatasetType, JobType } from '@app-types'
 import { useLineageData } from '../useLineageData'
 import { useSaveLineage } from '../useSaveLineage'
 import TableLevelFlow from '../TableLevelFlow'
+import { INITIAL_DATASET_ID } from '../constants'
 
-// Node ID generators
+
 let nodeId = 2
 const getJobId = () => `job-${nodeId++}`
 const getDatasetId = () => `dataset-${nodeId++}`
 
 const DatasetLineageCreateNew: React.FC = () => {
-  // Local state management for creation
+
   const {
     lineageData,
     updateNode,
@@ -21,19 +22,15 @@ const DatasetLineageCreateNew: React.FC = () => {
     toReactFlowFormat,
     createJobNode,
     createDatasetNode,
+    initializeWithDefaults,
   } = useLineageData()
 
-  // Save functionality
+
   const {
     isSaving,
     hasUnsavedChanges,
-    showValidationErrors,
-    validationErrors,
-    showSuccessDialog,
     saveLineage,
     setHasUnsavedChanges,
-    setShowValidationErrors,
-    setShowSuccessDialog,
   } = useSaveLineage()
 
   const [isInitialDatasetConfigured, setIsInitialDatasetConfigured] = useState(false)
@@ -45,36 +42,15 @@ const DatasetLineageCreateNew: React.FC = () => {
     if (!initializedRef.current) {
       initializedRef.current = true
       
-      // Create initial dataset
-      const initialDatasetData = {
-        id: 'dataset-1',
-        label: '',
-        type: NodeType.DATASET,
-        dataset: {
-          id: { namespace: '', name: '' },
-          name: '',
-          namespace: '',
-          type: DatasetType.DB_TABLE,
-          physicalName: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          sourceName: '',
-          fields: [],
-          facets: {},
-          tags: [],
-          lastModifiedAt: new Date().toISOString(),
-          description: ''
-        }
-      }
-      updateNode('dataset-1', initialDatasetData)
-      // Compute vertical center based on viewport (header ~65px, toolbar ~60px)
+      // Use shared initializer to seed initial dataset node
+      initializeWithDefaults(() => {})
       const header = 65
       const toolbar = 60
       const available = Math.max(200, window.innerHeight - header - toolbar)
       const centerY = Math.round(available / 2)
-      updateNodePosition('dataset-1', { x: 50, y: centerY })
+      updateNodePosition(INITIAL_DATASET_ID, { x: 50, y: centerY })
     }
-  }, [updateNode, updateNodePosition])
+  }, [initializeWithDefaults, updateNodePosition])
 
   // Convert local lineage data to ReactFlow format
   const lineageGraph = React.useMemo(() => {
@@ -86,8 +62,8 @@ const DatasetLineageCreateNew: React.FC = () => {
       ...node,
       data: {
         ...node.data,
-        showPulsingHandle: node.id === 'dataset-1' && isInitialDatasetConfigured && !hasCreatedFirstJob,
-        isDragEnabled: node.id === 'dataset-1' ? isInitialDatasetConfigured : true
+        showPulsingHandle: node.id === INITIAL_DATASET_ID && isInitialDatasetConfigured && !hasCreatedFirstJob,
+        isDragEnabled: node.id === INITIAL_DATASET_ID ? isInitialDatasetConfigured : true
       }
     }))
 
@@ -115,7 +91,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       updateNode(nodeId, updatedNodeData)
       
       // Mark initial dataset as configured if this is the first dataset
-      if (nodeId === 'dataset-1' && updatedData.dataset) {
+      if (nodeId === INITIAL_DATASET_ID && updatedData.dataset) {
         setIsInitialDatasetConfigured(true)
       }
     }
@@ -124,7 +100,7 @@ const DatasetLineageCreateNew: React.FC = () => {
   // Handle node creation
   const handleNodeCreate = useCallback((sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => {
     // Don't allow creation until initial dataset is configured
-    if (!isInitialDatasetConfigured && sourceNodeId === 'dataset-1') {
+    if (!isInitialDatasetConfigured && sourceNodeId === INITIAL_DATASET_ID) {
       return
     }
 
@@ -134,7 +110,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     if (sourceNodeType === NodeType.DATASET) {
       // Create job node
       const id = getJobId()
-      const namespace = '' // Should be derived from initial dataset
+      const namespace = getNode(INITIAL_DATASET_ID)?.dataset?.namespace || ''
       
       setHasCreatedFirstJob(true)
       createJobNode(id, newPosition, namespace)
@@ -146,7 +122,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     } else if (sourceNodeType === NodeType.JOB) {
       // Create dataset node
       const id = getDatasetId()
-      const namespace = '' // Should be derived from context
+      const namespace = getNode(INITIAL_DATASET_ID)?.dataset?.namespace || ''
       
       createDatasetNode(id, newPosition, namespace)
       
@@ -208,7 +184,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       onDelete={handleNodeDelete}
       useLayout={false}
       fitView={false}
-      initialSelectionId={'dataset-1'}
+      initialSelectionId={INITIAL_DATASET_ID}
       isSaving={isSaving}
       hasUnsavedChanges={hasUnsavedChanges}
       canSaveLineage={canSaveLineage()}

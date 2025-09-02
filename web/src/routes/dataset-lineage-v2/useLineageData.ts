@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { LineageData, LineageNodeData, NodeType, DatasetType, JobType } from '@app-types';
+import { INITIAL_DATASET_ID, DEFAULT_INITIAL_DATASET_LABEL } from './constants';
 
 export const useLineageData = () => {
   const [lineageData, setLineageData] = useState<LineageData>({
@@ -159,8 +160,8 @@ export const useLineageData = () => {
     // Only initialize if there are no nodes yet
     if (lineageData.nodes.size === 0) {
       const initialDatasetData: LineageNodeData = {
-        id: 'dataset-1',
-        label: 'Initial Dataset',
+        id: INITIAL_DATASET_ID,
+        label: DEFAULT_INITIAL_DATASET_LABEL,
         type: NodeType.DATASET,
         dataset: {
           id: { namespace: '', name: '' },
@@ -179,8 +180,8 @@ export const useLineageData = () => {
         }
       };
 
-      updateNode('dataset-1', initialDatasetData);
-      updateNodePosition('dataset-1', { x: 50, y: 300 });
+      updateNode(INITIAL_DATASET_ID, initialDatasetData);
+      updateNodePosition(INITIAL_DATASET_ID, { x: 50, y: 300 });
     }
     return toReactFlowFormat(handleNodeClick);
   }, [lineageData.nodes.size, updateNode, updateNodePosition, toReactFlowFormat]);

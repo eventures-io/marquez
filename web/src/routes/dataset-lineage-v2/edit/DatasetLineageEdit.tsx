@@ -223,7 +223,7 @@ const DatasetLineageEdit: React.FC = () => {
     setPendingDeleteNodeId(null)
   }, [pendingDeleteNodeId, deleteNode, setHasUnsavedChanges])
 
-  // Handle cancel delete
+
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false)
     setPendingDeleteNodeId(null)
@@ -232,7 +232,7 @@ const DatasetLineageEdit: React.FC = () => {
   // Handle save with deletion tracking
   const handleSave = async () => {
     try {
-      // First, handle deletions for nodes that were originally loaded but are now gone
+      // First, handle deletions for existing saved nodes
       const currentNodeIds = new Set(localLineageData.nodes.keys())
       const deletedNodeIds = Array.from(originalNodeIds).filter(id => !currentNodeIds.has(id))
       
@@ -240,7 +240,6 @@ const DatasetLineageEdit: React.FC = () => {
         console.log('Processing deletions for nodes:', deletedNodeIds)
         
         // We need to get the original node data to know namespace/name for deletion
-        // This is tricky since we don't have the original data anymore
         // For now, we'll need to parse the node ID format: "type:namespace:name"
         for (const nodeId of deletedNodeIds) {
           try {
@@ -267,11 +266,11 @@ const DatasetLineageEdit: React.FC = () => {
         }
       }
       
-      // Then save the current lineage (new/modified nodes)
+
       await saveLineage(localLineageData)
       
-      // Update original node IDs to current state after successful save
-      setOriginalNodeIds(new Set(localLineageData.nodes.keys()))
+      // // Update original node IDs to current state after successful save
+      // setOriginalNodeIds(new Set(localLineageData.nodes.keys()))
       
     } catch (error) {
       console.error('Save failed:', error)
@@ -285,7 +284,7 @@ const DatasetLineageEdit: React.FC = () => {
     return !isSaving
   }, [isSaving])
 
-  // Get pending delete node info for dialog
+
   const pendingDeleteNode = pendingDeleteNodeId ? getNode(pendingDeleteNodeId) : null
 
   return (

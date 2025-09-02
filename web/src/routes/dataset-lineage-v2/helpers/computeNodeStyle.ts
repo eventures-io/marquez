@@ -2,7 +2,7 @@ import { NodeType } from '@app-types';
 
 export interface NodeStyleDims { width: number; height: number }
 
-// Compute canonical node width/height from node data (used for ELK when style is absent)
+
 export const computeNodeStyleFromData = (data: any): NodeStyleDims => {
   const width = 150;
 
