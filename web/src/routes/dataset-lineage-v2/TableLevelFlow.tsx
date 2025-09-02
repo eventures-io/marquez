@@ -150,6 +150,7 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
           onPaneClick={handlePaneClick}
           onConnectEnd={undefined}
           onNodeCreate={mode !== LineageMode.VIEW ? onNodeCreate : undefined}
+          onEdgeCreate={mode !== LineageMode.VIEW ? onEdgeCreate : undefined}
           useLayout={useLayout}
           fitView={fitView}
           loading={loading}

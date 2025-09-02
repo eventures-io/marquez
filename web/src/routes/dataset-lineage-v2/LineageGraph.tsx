@@ -28,6 +28,7 @@ interface LineageGraphProps {
   onPaneClick: () => void;
   onConnectEnd?: (event: MouseEvent | TouchEvent, connectionState: any) => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
+  onEdgeCreate?: (sourceId: string, targetId: string) => void;
   useLayout?: boolean;
   fitView?: boolean;
   loading?: boolean;
@@ -43,6 +44,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   onPaneClick,
   onConnectEnd,
   onNodeCreate,
+  onEdgeCreate,
   useLayout = true,
   fitView = true,
   loading = false,
@@ -129,7 +131,38 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
   const edges = useLayout ? layoutHook.edges : rawEdges;
   const onNodesChange = useLayout ? layoutHook.onNodesChange : onRawNodesChange;
   const onEdgesChange = useLayout ? layoutHook.onEdgesChange : onRawEdgesChange;
-  const onConnect = useLayout ? layoutHook.onConnect : onRawConnect;
+  // Wrap onConnect to route to parent edge creation when provided
+  const handleConnect = useCallback((params: Connection) => {
+    const source = params.source as string | undefined;
+    const target = params.target as string | undefined;
+    if (onEdgeCreate && source && target) {
+      // Optional: validate connection types using available lineageGraph
+      try {
+        const sourceNode = lineageGraph?.nodes?.find((n) => n.id === source);
+        const targetNode = lineageGraph?.nodes?.find((n) => n.id === target);
+        const sType = (sourceNode as any)?.data?.type;
+        const tType = (targetNode as any)?.data?.type;
+        // Allow only dataset -> job or job -> dataset
+        if (sType && tType && sType !== tType) {
+          onEdgeCreate(source, target);
+          return;
+        }
+        // Fallback: if we can't determine types, still forward
+        if (!sType || !tType) {
+          onEdgeCreate(source, target);
+          return;
+        }
+        // Otherwise, ignore invalid same-type connection
+        return;
+      } catch {
+        // On any error, forward to parent to decide
+        if (source && target) onEdgeCreate(source, target);
+        return;
+      }
+    }
+    // No parent handler; update local RF edges for visual feedback
+    (useLayout ? layoutHook.onConnect : onRawConnect)(params);
+  }, [onEdgeCreate, lineageGraph, layoutHook.onConnect, onRawConnect, useLayout]);
 
   useEffect(() => {
     if (!useLayout) {
@@ -173,7 +206,7 @@ const LineageGraphInternal: React.FC<LineageGraphProps> = ({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={handleConnect}
         onConnectEnd={handleConnectEnd}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}

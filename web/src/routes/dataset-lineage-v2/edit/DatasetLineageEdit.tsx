@@ -14,9 +14,8 @@ import DeleteWarningDialog from '../DeleteWarningDialog'
 const DatasetLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
-  const navigate = useNavigate()
   
-  // State management
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [originalNodeIds, setOriginalNodeIds] = useState<Set<string>>(new Set())
@@ -24,7 +23,6 @@ const DatasetLineageEdit: React.FC = () => {
   // Simple delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [pendingDeleteNodeId, setPendingDeleteNodeId] = useState<string | null>(null)
-  const [isRootNodeDelete, setIsRootNodeDelete] = useState(false)
   
   // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
@@ -53,12 +51,10 @@ const DatasetLineageEdit: React.FC = () => {
   const {
     isSaving,
     hasUnsavedChanges,
-    showValidationErrors,
     validationErrors,
     showSuccessDialog,
     saveLineage,
     setHasUnsavedChanges,
-    setShowValidationErrors,
     setShowSuccessDialog,
   } = useSaveLineage()
 
@@ -220,7 +216,6 @@ const DatasetLineageEdit: React.FC = () => {
     if (isRoot) {
       // Show warning dialog for root node deletion
       setPendingDeleteNodeId(nodeId)
-      setIsRootNodeDelete(true)
       setDeleteDialogOpen(true)
     } else {
       // Regular deletion - just delete immediately
@@ -240,14 +235,12 @@ const DatasetLineageEdit: React.FC = () => {
     // Close dialog
     setDeleteDialogOpen(false)
     setPendingDeleteNodeId(null)
-    setIsRootNodeDelete(false)
   }, [pendingDeleteNodeId, deleteNode, setHasUnsavedChanges])
 
   // Handle cancel delete
   const handleCancelDelete = useCallback(() => {
     setDeleteDialogOpen(false)
     setPendingDeleteNodeId(null)
-    setIsRootNodeDelete(false)
   }, [])
 
   // Handle save with deletion tracking
