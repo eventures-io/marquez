@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
+import { ArrowBackIosRounded } from '@mui/icons-material';
 import { Divider, TextField, Box, IconButton, Typography, styled } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NodeType } from '@app-types';
@@ -8,7 +8,6 @@ interface TableLevelActionBarProps {
   nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
-  onRefresh: () => void;
 }
 
 const HEADER_HEIGHT = 64 + 1;
@@ -30,7 +29,6 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
   nodeType,
   depth,
   setDepth,
-  onRefresh,
 }) => {
   const { namespace, name } = useParams();
   const navigate = useNavigate();
@@ -85,14 +83,6 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
         </Box>
       </Box>
       <Box display="flex" alignItems="center">
-        <IconButton
-          sx={{ mr: 2 }}
-          color="primary"
-          size="small"
-          onClick={onRefresh}
-        >
-          <Refresh fontSize="small" />
-        </IconButton>
         <TextField
           id="table-level-depth"
           type="number"

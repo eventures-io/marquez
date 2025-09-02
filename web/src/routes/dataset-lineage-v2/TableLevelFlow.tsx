@@ -18,7 +18,6 @@ interface TableLevelFlowProps {
   nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
-  onRefresh: () => void;
   onUpdate?: (nodeId: string, data: any) => void;
   onSave?: () => void;
   onNodeCreate?: (sourceNodeId: string, sourceNodeType: NodeType, position: { x: number; y: number }) => void;
@@ -45,7 +44,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   nodeType,
   depth,
   setDepth,
-  onRefresh,
   onUpdate,
   onSave,
   onNodeCreate,
@@ -83,7 +81,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         nodeType={nodeType}
         depth={depth}
         setDepth={setDepth}
-        onRefresh={onRefresh}
       />
       
       <Box 

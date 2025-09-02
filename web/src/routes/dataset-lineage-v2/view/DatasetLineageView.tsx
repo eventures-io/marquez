@@ -71,7 +71,6 @@ const DatasetLineageView: React.FC = () => {
       nodeType={NodeType.DATASET}
       depth={depth}
       setDepth={setDepth}
-      onRefresh={fetchLineageData}
       loading={loading}
       error={error}
     />

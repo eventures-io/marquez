@@ -296,12 +296,11 @@ const DatasetLineageEdit: React.FC = () => {
       nodeType={NodeType.DATASET}
       depth={depth}
       setDepth={setDepth}
-      onRefresh={fetchLineageData}
-        onUpdate={handleNodeUpdate}
-        onSave={handleSave}
-        onNodeCreate={handleNodeCreate}
-        onEdgeCreate={handleEdgeCreate}
-        onDelete={handleNodeDelete}
+      onUpdate={handleNodeUpdate}
+      onSave={handleSave}
+      onNodeCreate={handleNodeCreate}
+      onEdgeCreate={handleEdgeCreate}
+      onDelete={handleNodeDelete}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
         canSaveLineage={canSaveLineage()}

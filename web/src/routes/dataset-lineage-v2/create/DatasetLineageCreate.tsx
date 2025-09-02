@@ -201,7 +201,6 @@ const DatasetLineageCreateNew: React.FC = () => {
       nodeType={NodeType.DATASET}
       depth={2}
       setDepth={() => {}} 
-      onRefresh={() => {}} 
       onUpdate={handleNodeUpdate}
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
