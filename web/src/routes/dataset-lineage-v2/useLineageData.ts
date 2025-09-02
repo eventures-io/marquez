@@ -24,20 +24,50 @@ export const useLineageData = () => {
       const newNodes = new Map(prev.nodes);
       const newEdges = new Map(prev.edges);
       
-      // Remove the node
+      // Remove the primary node
       const nodeExisted = newNodes.has(nodeId);
       newNodes.delete(nodeId);
       console.log('Node existed:', nodeExisted, 'Remaining nodes:', Array.from(newNodes.keys()));
       
-      // Remove all edges connected to this node
+      // Remove all edges connected to this node and track result datasets
       const edgesToDelete = [];
+      const resultDatasets = new Set<string>(); // Only target nodes (results)
+      
       for (const [edgeId, edge] of newEdges.entries()) {
         if (edge.source === nodeId || edge.target === nodeId) {
           edgesToDelete.push(edgeId);
           newEdges.delete(edgeId);
+          // Only track target nodes as potential candidates for deletion (result datasets)
+          if (edge.source === nodeId) {
+            resultDatasets.add(edge.target);
+          }
+          // Note: we do NOT add edge.source when edge.target === nodeId
+          // because those are input datasets that should remain
         }
       }
       console.log('Deleted edges:', edgesToDelete);
+      console.log('Result datasets that might be orphaned:', Array.from(resultDatasets));
+      
+      // Check for orphaned result dataset nodes (nodes with no remaining connections)
+      const orphanedNodes = [];
+      for (const datasetId of resultDatasets) {
+        const hasConnections = Array.from(newEdges.values()).some(edge => 
+          edge.source === datasetId || edge.target === datasetId
+        );
+        
+        if (!hasConnections) {
+          const node = newNodes.get(datasetId);
+          // Only auto-delete dataset nodes that were results of the deleted job
+          if (node && node.type === NodeType.DATASET) {
+            orphanedNodes.push(datasetId);
+            newNodes.delete(datasetId);
+          }
+        }
+      }
+      
+      if (orphanedNodes.length > 0) {
+        console.log('Deleted orphaned result dataset nodes:', orphanedNodes);
+      }
       
       return {
         nodes: newNodes,
@@ -45,7 +75,7 @@ export const useLineageData = () => {
       };
     });
     
-    // Also remove node position
+    // Clean up positions for the primary node (orphaned positions will be cleaned up on next render)
     setNodePositions(prev => {
       const newPositions = new Map(prev);
       newPositions.delete(nodeId);
