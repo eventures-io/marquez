@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Node, Edge } from '@xyflow/react';
+import { computeNodeStyleFromData } from './helpers/computeNodeStyle';
 
 const elk = new ELK();
 
@@ -24,7 +25,9 @@ const ensureMinimumVerticalSpacing = (nodes: Node[], minSpacing: number): Node[]
     for (let i = 1; i < columnNodes.length; i++) {
       const prevNode = columnNodes[i - 1];
       const currentNode = columnNodes[i];
-      const prevNodeHeight = typeof prevNode.style?.height === 'number' ? prevNode.style.height : 40;
+      const prevNodeHeight = typeof prevNode.style?.height === 'number'
+        ? prevNode.style.height
+        : computeNodeStyleFromData((prevNode as any).data).height;
       const minY = prevNode.position.y + prevNodeHeight + minSpacing;
       
       if (currentNode.position.y < minY) {
@@ -59,13 +62,10 @@ const useELKLayout = () => {
       id: 'root',
       layoutOptions: layoutOptions,
       children: nodes.map((node) => {
-        const width = typeof node.style?.width === 'number' ? node.style.width : 150;
-        const height = typeof node.style?.height === 'number' ? node.style.height : 40;
-        return {
-          id: node.id,
-          width,
-          height,
-        };
+        const inferred = computeNodeStyleFromData((node as any).data);
+        const width = typeof node.style?.width === 'number' ? node.style.width : inferred.width;
+        const height = typeof node.style?.height === 'number' ? node.style.height : inferred.height;
+        return { id: node.id, width, height };
       }),
       edges: edges.map((edge) => ({
         id: edge.id,
@@ -95,16 +95,18 @@ const useELKLayout = () => {
       edges,
       // Return graph bounds for optimal viewport calculation
       graphBounds: layoutedNodes.length > 0 ? (() => {
+        const getDims = (n: Node) => ({
+          width: typeof n.style?.width === 'number' ? n.style.width : computeNodeStyleFromData((n as any).data).width,
+          height: typeof n.style?.height === 'number' ? n.style.height : computeNodeStyleFromData((n as any).data).height,
+        });
         const bounds = {
           width: layoutedGraph.width || 0,
           height: layoutedGraph.height || 0,
           minX: Math.min(...layoutedNodes.map(n => n.position.x)),
-          maxX: Math.max(...layoutedNodes.map(n => n.position.x + (typeof n.style?.width === 'number' ? n.style.width : 150))),
+          maxX: Math.max(...layoutedNodes.map(n => n.position.x + getDims(n).width)),
           minY: Math.min(...layoutedNodes.map(n => n.position.y)),
-          maxY: Math.max(...layoutedNodes.map(n => n.position.y + (typeof n.style?.height === 'number' ? n.style.height : 40))),
+          maxY: Math.max(...layoutedNodes.map(n => n.position.y + getDims(n).height)),
         };
-        
-        
         return bounds;
       })() : null
     };
