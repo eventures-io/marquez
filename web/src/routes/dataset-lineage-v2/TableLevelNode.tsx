@@ -9,7 +9,6 @@ interface TableLevelNodeData {
   type: NodeType;
   dataset?: LineageDataset;
   job?: LineageJob;
-  isCompact?: boolean;
   onNodeClick?: (id: string) => void;
   showPulsingHandle?: boolean;
   isDragEnabled?: boolean;
@@ -18,7 +17,6 @@ interface TableLevelNodeData {
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {
   const nodeData = data as unknown as TableLevelNodeData;
   const isJob = nodeData.type === NodeType.JOB;
-  const isCompact = nodeData.isCompact;
 
   const getNodeStyle = () => {
     return {
@@ -38,7 +36,7 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
   };
 
   const renderDatasetFields = () => {
-    if (isCompact || !nodeData.dataset?.fields) return null;
+    if (!nodeData.dataset?.fields) return null;
     
     return (
       <Box sx={{ mt: 1, maxHeight: '100px', overflow: 'auto' }}>
@@ -78,13 +76,13 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
     <div
       onClick={handleNodeClick}
       style={{
-        padding: isCompact ? '8px 12px' : '12px',
+        padding: '12px',
         border: `2px solid ${nodeStyle.borderColor}`,
         borderRadius: '6px',
         background: nodeStyle.background,
         color: nodeStyle.color,
         fontSize: '12px',
-        minWidth: isCompact ? '100px' : '150px',
+        minWidth: '150px',
         maxWidth: '200px',
         display: 'flex',
         flexDirection: 'column',
@@ -110,7 +108,7 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
         }}
       />
 
-      {!isCompact && (
+      {(
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="caption" sx={{ fontSize: '10px', opacity: 0.8 }}>
             {isJob ? '⚙️ JOB' : '📊 DATASET'}
@@ -137,20 +135,20 @@ const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) 
           fontWeight: 'bold',
           wordBreak: 'break-word',
           textAlign: 'center',
-          fontSize: isCompact ? '11px' : '12px',
+          fontSize: '12px',
           lineHeight: 1.2,
         }}
       >
         {nodeData.label}
       </Typography>
 
-      {!isCompact && nodeData.dataset && (
+      {nodeData.dataset && (
         <Typography variant="caption" sx={{ fontSize: '9px', opacity: 0.7, mt: 0.5 }}>
           {nodeData.dataset.namespace}
         </Typography>
       )}
 
-      {!isCompact && nodeData.dataset?.tags && nodeData.dataset.tags.length > 0 && (
+      {nodeData.dataset?.tags && nodeData.dataset.tags.length > 0 && (
         <Box sx={{ mt: 0.5, display: 'flex', flexWrap: 'wrap', gap: 0.25 }}>
           {nodeData.dataset.tags.slice(0, 2).map((tag: { name: string }, index: number) => (
             <Chip

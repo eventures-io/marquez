@@ -200,18 +200,13 @@ const DatasetLineageCreateNew: React.FC = () => {
       lineageGraph={lineageGraph}
       nodeType={NodeType.DATASET}
       depth={2}
-      setDepth={() => {}} // Not used in create mode
-      isCompact={false}
-      setIsCompact={() => {}} // Not used in create mode  
-      isFull={false}
-      setIsFull={() => {}} // Not used in create mode
-      onRefresh={() => {}} // Not used in create mode
+      setDepth={() => {}} 
+      onRefresh={() => {}} 
       onUpdate={handleNodeUpdate}
       onSave={handleSave}
       onNodeCreate={handleNodeCreate}
       onEdgeCreate={handleEdgeCreate}
       onDelete={handleNodeDelete}
-      // Create mode: manual positions, left-aligned, open drawer
       useLayout={false}
       fitView={false}
       initialSelectionId={'dataset-1'}

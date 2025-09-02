@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { LineageGraph, NodeType, LineageMode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
-import { generateNodeId } from '../../../helpers/nodes'
 import { createTableLevelElements } from '../tableLevelMapping'
 import TableLevelFlow from '../TableLevelFlow'
 
@@ -17,12 +16,8 @@ const DatasetLineageView: React.FC = () => {
   
   // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
-  const [isCompact, setIsCompact] = useState(searchParams.get('isCompact') === 'true')
-  const [isFull, setIsFull] = useState(searchParams.get('isFull') === 'true')
   
-  const currentNodeId = namespace && name ? 
-    generateNodeId('DATASET', namespace, name) : null
-  const collapsedNodes = searchParams.get('collapsedNodes')
+  // Full-graph view by default; no collapsed nodes
 
   // Fetch lineage data
   const fetchLineageData = useCallback(async () => {
@@ -51,10 +46,8 @@ const DatasetLineageView: React.FC = () => {
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams)
     newSearchParams.set('depth', depth.toString())
-    newSearchParams.set('isCompact', isCompact.toString())
-    newSearchParams.set('isFull', isFull.toString())
     setSearchParams(newSearchParams)
-  }, [depth, isCompact, isFull, setSearchParams])
+  }, [depth, setSearchParams])
 
   // Map lineage data to ReactFlow format
   const lineageGraph = React.useMemo(() => {
@@ -63,19 +56,13 @@ const DatasetLineageView: React.FC = () => {
     }
 
     try {
-      const { nodes, edges } = createTableLevelElements(
-        lineageData,
-        currentNodeId,
-        isCompact,
-        isFull,
-        collapsedNodes
-      )
+      const { nodes, edges } = createTableLevelElements(lineageData)
       return { nodes, edges }
     } catch (error) {
       console.error('Error mapping lineage data:', error)
       return null
     }
-  }, [lineageData, currentNodeId, isCompact, isFull, collapsedNodes])
+  }, [lineageData])
 
   return (
     <TableLevelFlow 
@@ -84,10 +71,6 @@ const DatasetLineageView: React.FC = () => {
       nodeType={NodeType.DATASET}
       depth={depth}
       setDepth={setDepth}
-      isCompact={isCompact}
-      setIsCompact={setIsCompact}
-      isFull={isFull}
-      setIsFull={setIsFull}
       onRefresh={fetchLineageData}
       loading={loading}
       error={error}

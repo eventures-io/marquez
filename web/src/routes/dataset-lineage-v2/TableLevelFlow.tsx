@@ -18,10 +18,6 @@ interface TableLevelFlowProps {
   nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
-  isCompact: boolean;
-  setIsCompact: (isCompact: boolean) => void;
-  isFull: boolean;
-  setIsFull: (isFull: boolean) => void;
   onRefresh: () => void;
   onUpdate?: (nodeId: string, data: any) => void;
   onSave?: () => void;
@@ -49,10 +45,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
   nodeType,
   depth,
   setDepth,
-  isCompact,
-  setIsCompact,
-  isFull,
-  setIsFull,
   onRefresh,
   onUpdate,
   onSave,
@@ -91,10 +83,6 @@ const TableLevelFlow: React.FC<TableLevelFlowProps> = ({
         nodeType={nodeType}
         depth={depth}
         setDepth={setDepth}
-        isCompact={isCompact}
-        setIsCompact={setIsCompact}
-        isFull={isFull}
-        setIsFull={setIsFull}
         onRefresh={onRefresh}
       />
       

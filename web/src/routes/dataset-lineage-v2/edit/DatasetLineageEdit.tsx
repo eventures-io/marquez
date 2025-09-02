@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { NodeType, LineageMode, LineageEdgeData, LineageNodeData, LineageNode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
-import { generateNodeId } from '../../../helpers/nodes'
 import { createTableLevelElements } from '../tableLevelMapping'
 import { deleteDataset } from '../../../store/requests/datasets'
 import { deleteJob } from '../../../store/requests/jobs'
@@ -26,12 +25,7 @@ const DatasetLineageEdit: React.FC = () => {
   
   // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
-  const [isCompact, setIsCompact] = useState(searchParams.get('isCompact') === 'true')
-  const [isFull, setIsFull] = useState(searchParams.get('isFull') === 'true')
   
-  const currentNodeId = namespace && name ? 
-    generateNodeId('DATASET', namespace, name) : null
-  const collapsedNodes = searchParams.get('collapsedNodes')
 
   // Local state management for edits
   const {
@@ -75,13 +69,7 @@ const DatasetLineageEdit: React.FC = () => {
       console.log('Original node IDs from server:', Array.from(originalIds))
       
       // Use existing table level mapping to get proper positioning and edges
-      const result = createTableLevelElements(
-        serverData,
-        currentNodeId,
-        isCompact,
-        isFull,
-        collapsedNodes
-      )
+      const result = createTableLevelElements(serverData)
       
       console.log('Mapped server data to ReactFlow format:', result)
       
@@ -112,7 +100,7 @@ const DatasetLineageEdit: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }, [namespace, name, depth, currentNodeId, isCompact, isFull, collapsedNodes, updateNode, updateNodePosition, addLineageEdge])
+  }, [namespace, name, depth, updateNode, updateNodePosition, addLineageEdge])
 
   // Load lineage data on mount and when params change
   useEffect(() => {
@@ -124,10 +112,8 @@ const DatasetLineageEdit: React.FC = () => {
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams)
     newSearchParams.set('depth', depth.toString())
-    newSearchParams.set('isCompact', isCompact.toString())
-    newSearchParams.set('isFull', isFull.toString())
     setSearchParams(newSearchParams)
-  }, [depth, isCompact, isFull, setSearchParams])
+  }, [depth, setSearchParams])
 
   // Map local lineage data to ReactFlow format (single source of truth)
   const lineageGraph = React.useMemo(() => {
@@ -307,14 +293,10 @@ const DatasetLineageEdit: React.FC = () => {
       <TableLevelFlow 
         mode={LineageMode.EDIT}
         lineageGraph={lineageGraph}
-        nodeType={NodeType.DATASET}
-        depth={depth}
-        setDepth={setDepth}
-        isCompact={isCompact}
-        setIsCompact={setIsCompact}
-        isFull={isFull}
-        setIsFull={setIsFull}
-        onRefresh={fetchLineageData}
+      nodeType={NodeType.DATASET}
+      depth={depth}
+      setDepth={setDepth}
+      onRefresh={fetchLineageData}
         onUpdate={handleNodeUpdate}
         onSave={handleSave}
         onNodeCreate={handleNodeCreate}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowBackIosRounded, Refresh } from '@mui/icons-material';
-import { Divider, FormControlLabel, Switch, TextField, Box, IconButton, Typography, styled } from '@mui/material';
+import { Divider, TextField, Box, IconButton, Typography, styled } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NodeType } from '@app-types';
 
@@ -8,10 +8,6 @@ interface TableLevelActionBarProps {
   nodeType: NodeType;
   depth: number;
   setDepth: (depth: number) => void;
-  isCompact: boolean;
-  setIsCompact: (isCompact: boolean) => void;
-  isFull: boolean;
-  setIsFull: (isFull: boolean) => void;
   onRefresh: () => void;
 }
 
@@ -34,10 +30,6 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
   nodeType,
   depth,
   setDepth,
-  isCompact,
-  setIsCompact,
-  isFull,
-  setIsFull,
   onRefresh,
 }) => {
   const { namespace, name } = useParams();
@@ -114,28 +106,7 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
             setDepth(isNaN(parseInt(e.target.value)) ? 0 : parseInt(e.target.value));
           }}
         />
-        <Box display="flex" flexDirection="column">
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={isFull}
-                onChange={(_, checked) => setIsFull(checked)}
-              />
-            }
-            label={<Typography variant="body2" fontFamily="monospace">Full Graph</Typography>}
-          />
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={isCompact}
-                onChange={(_, checked) => setIsCompact(checked)}
-              />
-            }
-            label={<Typography variant="body2" fontFamily="monospace">Compact Nodes</Typography>}
-          />
-        </Box>
+        {/* Removed Full Graph and Compact toggles */}
       </Box>
     </StyledActionBar>
   );
