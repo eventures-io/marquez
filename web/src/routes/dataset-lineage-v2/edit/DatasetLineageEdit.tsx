@@ -4,6 +4,8 @@ import { NodeType, LineageMode, LineageEdgeData, LineageNodeData, LineageNode } 
 import { getLineage } from '../../../store/requests/lineage'
 import { generateNodeId } from '../../../helpers/nodes'
 import { createTableLevelElements } from '../tableLevelMapping'
+import { deleteDataset } from '../../../store/requests/datasets'
+import { deleteJob } from '../../../store/requests/jobs'
 import { useLineageData } from '../useLineageData'
 import { useSaveLineage } from '../useSaveLineage'
 import TableLevelFlow from '../TableLevelFlow'
@@ -15,6 +17,7 @@ const DatasetLineageEdit: React.FC = () => {
   // State management
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [originalNodeIds, setOriginalNodeIds] = useState<Set<string>>(new Set())
   
   // Control states
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
@@ -61,6 +64,11 @@ const DatasetLineageEdit: React.FC = () => {
     try {
       const serverData = await getLineage('DATASET', namespace, name, depth)
       console.log('Fetched server data:', serverData)
+      
+      // Track original node IDs for deletion tracking during save
+      const originalIds = new Set<string>(serverData.graph.map((node: LineageNode) => node.id))
+      setOriginalNodeIds(originalIds)
+      console.log('Original node IDs from server:', Array.from(originalIds))
       
       // Use existing table level mapping to get proper positioning and edges
       const result = createTableLevelElements(
@@ -193,16 +201,61 @@ const DatasetLineageEdit: React.FC = () => {
     setHasUnsavedChanges(true)
   }, [addLineageEdge, setHasUnsavedChanges])
 
-  // Handle node deletion
+  // Handle node deletion (only local state, persistence happens on save)
   const handleNodeDelete = useCallback((nodeId: string) => {
-    console.log('handleNodeDelete called with nodeId:', nodeId);
+    console.log('handleNodeDelete called with nodeId:', nodeId)
     deleteNode(nodeId)
-    setHasUnsavedChanges(true)
+    setHasUnsavedChanges(true) // Mark as having changes to be saved
   }, [deleteNode, setHasUnsavedChanges])
 
-  // Handle save
+  // Handle save with deletion tracking
   const handleSave = async () => {
-    await saveLineage(localLineageData)
+    try {
+      // First, handle deletions for nodes that were originally loaded but are now gone
+      const currentNodeIds = new Set(localLineageData.nodes.keys())
+      const deletedNodeIds = Array.from(originalNodeIds).filter(id => !currentNodeIds.has(id))
+      
+      if (deletedNodeIds.length > 0) {
+        console.log('Processing deletions for nodes:', deletedNodeIds)
+        
+        // We need to get the original node data to know namespace/name for deletion
+        // This is tricky since we don't have the original data anymore
+        // For now, we'll need to parse the node ID format: "type:namespace:name"
+        for (const nodeId of deletedNodeIds) {
+          try {
+            const parts = nodeId.split(':')
+            if (parts.length >= 3) {
+              const nodeType = parts[0]
+              const namespace = parts[1] 
+              const name = parts.slice(2).join(':') // Handle names with colons
+              
+              if (nodeType === 'dataset') {
+                console.log('Deleting dataset from backend:', namespace, name)
+                await deleteDataset(namespace, name)
+              } else if (nodeType === 'job') {
+                console.log('Deleting job from backend:', namespace, name)
+                await deleteJob(namespace, name)
+              }
+            } else {
+              console.warn('Could not parse node ID for deletion:', nodeId)
+            }
+          } catch (error) {
+            console.error(`Failed to delete node ${nodeId}:`, error)
+            // Continue with other deletions even if one fails
+          }
+        }
+      }
+      
+      // Then save the current lineage (new/modified nodes)
+      await saveLineage(localLineageData)
+      
+      // Update original node IDs to current state after successful save
+      setOriginalNodeIds(new Set(localLineageData.nodes.keys()))
+      
+    } catch (error) {
+      console.error('Save failed:', error)
+      throw error // Re-throw so the save hook can handle it
+    }
   }
 
   // Check if lineage can be saved

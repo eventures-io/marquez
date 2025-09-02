@@ -162,7 +162,7 @@ const DatasetLineageCreateNew: React.FC = () => {
     addLineageEdge(edgeId, sourceId, targetId)
   }, [addLineageEdge])
 
-  // Handle node deletion
+  // Handle node deletion (in create mode, just remove from local state)
   const handleNodeDelete = useCallback((nodeId: string) => {
     deleteNode(nodeId)
     setHasUnsavedChanges(true)
