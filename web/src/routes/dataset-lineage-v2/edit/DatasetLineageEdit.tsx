@@ -2,13 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { NodeType, LineageMode, LineageEdgeData, LineageNodeData, LineageNode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
-import { createTableLevelElements } from '../tableLevelMapping'
+import { createTableLevelElements } from '../table-view/tableLevelMapping'
 import { deleteDataset } from '../../../store/requests/datasets'
 import { deleteJob } from '../../../store/requests/jobs'
-import { useLineageData } from '../useLineageData'
-import { useSaveLineage } from '../useSaveLineage'
-import TableLevelFlow from '../TableLevelFlow'
-import DeleteWarningDialog from '../DeleteWarningDialog'
+import { useLineageData } from '../table-view/useLineageData'
+import { useSaveLineage } from '../table-view/useSaveLineage'
+import TableLevelFlow from '../table-view/TableLevelFlow'
+import DeleteWarningDialog from '../components/DeleteWarningDialog'
 
 const DatasetLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()

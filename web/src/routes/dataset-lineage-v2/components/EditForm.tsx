@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { NodeType } from '../dataset-lineage-v2/types/lineage';
+import { NodeType } from '../types/lineage';
 import DatasetForm from './DatasetForm';
 import JobForm from './JobForm';
 

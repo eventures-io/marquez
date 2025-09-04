@@ -1,9 +1,9 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { LineageMode, NodeType } from '@app-types'
-import { useLineageData } from '../useLineageData'
-import { useSaveLineage } from '../useSaveLineage'
-import TableLevelFlow from '../TableLevelFlow'
-import { INITIAL_DATASET_ID } from '../constants'
+import { useLineageData } from '../table-view/useLineageData'
+import { useSaveLineage } from '../table-view/useSaveLineage'
+import TableLevelFlow from '../table-view/TableLevelFlow'
+import { INITIAL_DATASET_ID } from '../table-view/constants'
 
 
 let nodeId = 2

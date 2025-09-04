@@ -2,8 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { LineageGraph, NodeType, LineageMode } from '@app-types'
 import { getLineage } from '../../../store/requests/lineage'
-import { createTableLevelElements } from '../tableLevelMapping'
-import TableLevelFlow from '../TableLevelFlow'
+import { createTableLevelElements } from '../table-view/tableLevelMapping'
+import TableLevelFlow from '../table-view/TableLevelFlow'
 
 const DatasetLineageView: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()

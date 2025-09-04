@@ -15,7 +15,7 @@ import {
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { DatasetType } from './types/lineage';
+import { DatasetType } from '../types/lineage';
 
 interface DatasetFormData {
   label: string;

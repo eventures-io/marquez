@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Node, Edge } from '@xyflow/react';
-import { computeNodeStyleFromData } from './helpers/computeNodeStyle';
+import { computeNodeStyleFromData } from '../helpers/computeNodeStyle';
 
 const elk = new ELK();
 

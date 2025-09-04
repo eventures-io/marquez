@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getJob } from '../../store/requests/jobs';
-import { getJobFacets } from '../../store/requests/facets';
+import { getJob } from '../../../store/requests/jobs';
+import { getJobFacets } from '../../../store/requests/facets';
 import { Job, NodeType } from '@app-types';
 
 interface UseJobDetailsReturn {

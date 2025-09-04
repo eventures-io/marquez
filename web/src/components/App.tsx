@@ -19,11 +19,13 @@ import Dashboard from '../routes/dashboard/Dashboard'
 import DatasetLineageView from '../routes/dataset-lineage-v2/view/DatasetLineageView'
 import DatasetLineageEdit from '../routes/dataset-lineage-v2/edit/DatasetLineageEdit'
 import DatasetLineageCreate from '../routes/dataset-lineage-v2/create/DatasetLineageCreate'
+import DatasetColumnLineageView from '../routes/dataset-lineage-v2/column-view/DatasetColumnLineageView'
 import Datasets from '../routes/datasets/Datasets'
 import Events from '../routes/events/Events'
 import Header from './header/Header'
 import Jobs from '../routes/jobs/Jobs'
 import React, { ReactElement } from 'react'
+import { Navigate } from 'react-router-dom'
 import Sidenav from './sidenav/Sidenav'
 import TableLevel from '../routes/table-level/TableLevel'
 import Toast from './Toast'
@@ -77,7 +79,15 @@ const App = (): ReactElement => {
                     <Route path={'/lineage/:nodeType/:namespace/:name'} element={<TableLevel />} />
                     <Route 
                       path={'/v2/dataset/:namespace/:name'} 
+                      element={<Navigate to="table-view" replace />} 
+                    />
+                    <Route 
+                      path={'/v2/dataset/:namespace/:name/table-view'} 
                       element={<DatasetLineageView />} 
+                    />
+                    <Route 
+                      path={'/v2/dataset/:namespace/:name/column-view'} 
+                      element={<DatasetColumnLineageView />} 
                     />
                     <Route 
                       path={'/v2/dataset/:namespace/:name/view'} 

@@ -1,8 +1,9 @@
 import React from 'react';
 import { ArrowBackIosRounded } from '@mui/icons-material';
 import { Divider, TextField, Box, IconButton, Typography, styled } from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { NodeType } from '@app-types';
+import ViewSelector, { ViewType } from '../components/ViewSelector';
 
 interface TableLevelActionBarProps {
   nodeType: NodeType;
@@ -32,6 +33,15 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
 }) => {
   const { namespace, name } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Determine current view from URL
+  const getCurrentView = (): ViewType => {
+    if (location.pathname.includes('/column-view')) {
+      return 'column-view';
+    }
+    return 'table-view'; // default to table-view
+  };
 
   return (
     <StyledActionBar height={HEADER_HEIGHT - 1}>
@@ -43,12 +53,8 @@ export const TableLevelActionBar: React.FC<TableLevelActionBarProps> = ({
         >
           <ArrowBackIosRounded fontSize="small" />
         </IconButton>
-        <Typography variant="h6">{nodeType === NodeType.JOB ? 'Jobs' : 'Datasets'}</Typography>
-        <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
-        <Box>
-          <Typography variant="body2" color="text.secondary">Mode</Typography>
-          <Typography variant="body2" fontFamily="monospace">Table Level V2</Typography>
-        </Box>
+        <Typography variant="h6" sx={{ mr: 2 }}>{nodeType === NodeType.JOB ? 'Jobs' : 'Datasets'}</Typography>
+        <ViewSelector currentView={getCurrentView()} />
         <Divider orientation="vertical" flexItem sx={{ mx: 2 }} />
         <Box>
           <Typography variant="body2" color="text.secondary">Namespace</Typography>
