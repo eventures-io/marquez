@@ -37,103 +37,114 @@ const ColumnFieldNode: React.FC<NodeProps> = ({
     return 'default';
   };
 
+  const getNodeStyle = () => {
+    return {
+      background: selected ? '#424242' : '#fff',
+      borderColor: selected ? '#212121' : '#bbb',
+      color: selected ? '#fff' : '#333',
+    };
+  };
+
+  const nodeStyle = getNodeStyle();
+
   return (
-    <Box
+    <div
       onClick={handleClick}
-      sx={{
-        minWidth: 200,
-        minHeight: 50,
-        backgroundColor: typedData.isHighlighted ? 'rgba(25, 118, 210, 0.1)' : 'white',
-        border: selected 
-          ? '2px solid #1976d2' 
-          : typedData.isHighlighted 
-          ? '2px solid rgba(25, 118, 210, 0.5)'
-          : '1px solid #e0e0e0',
-        borderRadius: 2,
-        boxShadow: selected 
-          ? '0 3px 10px rgba(25, 118, 210, 0.3)' 
-          : typedData.isHighlighted
-          ? '0 2px 8px rgba(25, 118, 210, 0.2)'
-          : '0 1px 4px rgba(0, 0, 0, 0.1)',
+      style={{
+        padding: '8px 12px',
+        border: `2px solid ${nodeStyle.borderColor}`,
+        borderRadius: '6px',
+        background: nodeStyle.background,
+        color: nodeStyle.color,
+        fontSize: '11px',
+        minWidth: '180px',
+        maxWidth: '220px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        fontWeight: '500',
+        boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: '0 3px 12px rgba(0, 0, 0, 0.2)',
-          transform: 'translateY(-1px)',
-        },
+        transform: selected ? 'scale(1.05)' : 'scale(1)',
       }}
     >
-      {/* Handles for connections */}
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#555', width: 8, height: 8 }}
+        isConnectable={true}
+        style={{ 
+          background: '#ccc',
+          width: 6,
+          height: 6,
+          border: '1px solid white',
+          opacity: 0.8,
+        }}
       />
 
-      <Box p={1.5}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
-          <Typography 
-            variant="body2" 
-            component="div" 
-            sx={{ 
-              fontWeight: 600, 
-              fontSize: '0.85rem',
-              color: typedData.isPrimaryKey ? '#d32f2f' : 'inherit'
-            }}
-          >
-            {typedData.fieldName}
-            {typedData.isPrimaryKey && (
-              <Typography component="span" sx={{ ml: 0.5, fontSize: '0.7rem', color: '#d32f2f' }}>
-                PK
-              </Typography>
-            )}
-          </Typography>
-        </Box>
-        
-        <Box display="flex" alignItems="center" gap={1}>
-          {typedData.dataType && (
-            <Chip 
-              label={typedData.dataType} 
-              size="small"
-              color={getTypeColor(typedData.dataType)}
-              variant="outlined"
-              sx={{ fontSize: '0.65rem', height: 20 }}
-            />
-          )}
-          
-          {typedData.isNullable === false && (
-            <Chip 
-              label="NOT NULL" 
-              size="small"
-              color="error"
-              variant="outlined"
-              sx={{ fontSize: '0.6rem', height: 18 }}
-            />
-          )}
-        </Box>
-        
-        {typedData.description && (
-          <Typography 
-            variant="caption" 
-            color="text.secondary" 
-            sx={{ 
-              mt: 0.5, 
-              display: 'block', 
-              fontSize: '0.7rem',
-              lineHeight: 1.2
-            }}
-          >
-            {typedData.description.length > 60 ? `${typedData.description.substring(0, 60)}...` : typedData.description}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+        <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.8 }}>
+          🔗 FIELD
+        </Typography>
+        {typedData.isPrimaryKey && (
+          <Typography component="span" sx={{ ml: 0.5, fontSize: '7px', opacity: 0.7 }}>
+            PK
           </Typography>
         )}
       </Box>
 
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 'bold',
+          wordBreak: 'break-word',
+          fontSize: '11px',
+          lineHeight: 1.2,
+          mb: 0.25,
+        }}
+      >
+        {typedData.fieldName}
+      </Typography>
+
+      {typedData.dataType && (
+        <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.7 }}>
+          {typedData.dataType}
+          {typedData.isNullable === false && ' • NOT NULL'}
+        </Typography>
+      )}
+
+      {typedData.description && (
+        <Typography 
+          variant="caption" 
+          sx={{ 
+            fontSize: '8px',
+            opacity: 0.6,
+            mt: 0.25,
+            lineHeight: 1.1,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {typedData.description}
+        </Typography>
+      )}
+
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: '#555', width: 8, height: 8 }}
+        isConnectable={true}
+        style={{ 
+          background: nodeStyle.borderColor,
+          width: 6,
+          height: 6,
+          border: '1px solid white',
+          opacity: 1,
+        }}
       />
-    </Box>
+    </div>
   );
 };
 

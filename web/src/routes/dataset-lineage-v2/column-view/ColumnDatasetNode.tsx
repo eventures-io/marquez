@@ -24,82 +24,95 @@ const ColumnDatasetNode: React.FC<NodeProps> = ({
     }
   };
 
+  const getNodeStyle = () => {
+    return {
+      background: selected ? '#424242' : '#fff',
+      borderColor: selected ? '#212121' : '#bbb',
+      color: selected ? '#fff' : '#333',
+    };
+  };
+
+  const nodeStyle = getNodeStyle();
+
   return (
-    <Box
+    <div
       onClick={handleClick}
-      sx={{
-        minWidth: 280,
-        minHeight: 60,
-        backgroundColor: 'white',
-        border: selected ? '2px solid #1976d2' : '1px solid #ddd',
-        borderRadius: 2,
-        boxShadow: selected ? '0 4px 12px rgba(25, 118, 210, 0.3)' : '0 2px 8px rgba(0, 0, 0, 0.1)',
+      style={{
+        padding: '15px',
+        border: `2px solid ${nodeStyle.borderColor}`,
+        borderRadius: '8px',
+        background: nodeStyle.background,
+        color: nodeStyle.color,
+        fontSize: '12px',
+        minWidth: '250px',
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        fontWeight: '500',
+        boxShadow: selected ? '0 4px 12px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
-        '&:hover': {
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
-          transform: 'translateY(-2px)',
-        },
+        position: 'relative',
       }}
     >
-      {/* Top Handle */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        style={{ background: '#555' }}
-      />
-      
-      {/* Left Handle */}
       <Handle
         type="target"
         position={Position.Left}
-        style={{ background: '#555' }}
+        isConnectable={true}
+        style={{ 
+          background: '#ccc',
+          width: 8,
+          height: 8,
+          border: '2px solid white',
+          opacity: 0.8,
+        }}
       />
 
-      <Box p={2}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600 }}>
-            {typedData.name}
-          </Typography>
-          <Chip 
-            label="Dataset" 
-            size="small" 
-            color="primary"
-            variant="outlined"
-          />
-        </Box>
-        
-        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-          {typedData.namespace}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+        <Typography variant="caption" sx={{ fontSize: '10px', opacity: 0.8 }}>
+          📊 DATASET
         </Typography>
-        
-        {typedData.description && (
-          <Typography variant="body2" sx={{ mt: 1, fontSize: '0.8rem' }}>
-            {typedData.description}
-          </Typography>
-        )}
-        
-        {typedData.columnCount && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            {typedData.columnCount} columns
-          </Typography>
-        )}
       </Box>
 
-      {/* Right Handle */}
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 'bold',
+          wordBreak: 'break-word',
+          textAlign: 'center',
+          fontSize: '12px',
+          lineHeight: 1.2,
+        }}
+      >
+        {typedData.name}
+      </Typography>
+
+      <Typography variant="caption" sx={{ fontSize: '9px', opacity: 0.7, mt: 0.5 }}>
+        {typedData.namespace}
+      </Typography>
+
+      {typedData.columnCount && (
+        <Typography variant="caption" sx={{ fontSize: '8px', opacity: 0.6, mt: 0.25 }}>
+          {typedData.columnCount} columns
+        </Typography>
+      )}
+
       <Handle
         type="source"
         position={Position.Right}
-        style={{ background: '#555' }}
+        isConnectable={true}
+        style={{ 
+          background: nodeStyle.borderColor,
+          width: 8,
+          height: 8,
+          border: '2px solid white',
+          opacity: 1,
+        }}
       />
-      
-      {/* Bottom Handle */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={{ background: '#555' }}
-      />
-    </Box>
+    </div>
   );
 };
 

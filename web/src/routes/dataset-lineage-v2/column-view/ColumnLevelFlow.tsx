@@ -18,6 +18,7 @@ import ColumnFieldNode from './ColumnFieldNode';
 import ColumnLevelActionBar from './ColumnLevelActionBar';
 import DetailsPane from '../components/DetailsPane';
 import useColumnDrawerState from './useColumnDrawerState';
+import useColumnELKLayout from './useColumnELKLayout';
 import { NodeType, LineageMode } from '@app-types';
 import '@xyflow/react/dist/style.css';
 
@@ -62,6 +63,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   selectedColumn,
 }) => {
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useColumnDrawerState();
+  const { getLayoutedElements } = useColumnELKLayout();
   const didAutoOpenRef = useRef(false);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -69,11 +71,26 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   // Update nodes and edges when columnLineageGraph changes
   useEffect(() => {
-    if (columnLineageGraph) {
-      setNodes(columnLineageGraph.nodes);
-      setEdges(columnLineageGraph.edges);
-    }
-  }, [columnLineageGraph, setNodes, setEdges]);
+    const applyLayout = async () => {
+      if (columnLineageGraph) {
+        try {
+          const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
+            columnLineageGraph.nodes,
+            columnLineageGraph.edges
+          );
+          setNodes(layoutedNodes);
+          setEdges(layoutedEdges);
+        } catch (error) {
+          console.error('Error applying ELK layout:', error);
+          // Fallback to original positions
+          setNodes(columnLineageGraph.nodes);
+          setEdges(columnLineageGraph.edges);
+        }
+      }
+    };
+    
+    applyLayout();
+  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges]);
 
   // Open drawer initially if requested (only once)
   useEffect(() => {

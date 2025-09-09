@@ -59,21 +59,13 @@ export const createColumnLevelElements = (
     datasetGroups.get(datasetKey)!.columns.push(node);
   });
 
-  // Create nodes for each dataset group
-  let datasetIndex = 0;
-  const datasetPositions: Map<string, { x: number; y: number }> = new Map();
-  
+  // Create nodes for each dataset group - let ELK handle positioning
   datasetGroups.forEach((group, datasetKey) => {
-    const datasetX = datasetIndex * 350;
-    const datasetY = 50;
-    
-    datasetPositions.set(datasetKey, { x: datasetX, y: datasetY });
-    
     // Create dataset container node
     const datasetNode: Node = {
       id: `dataset:${datasetKey}`,
       type: 'dataset-container',
-      position: { x: datasetX, y: datasetY },
+      position: { x: 0, y: 0 }, // ELK will position this
       data: {
         id: `dataset:${datasetKey}`,
         namespace: group.namespace,
@@ -82,20 +74,20 @@ export const createColumnLevelElements = (
         columnCount: group.columns.length,
       },
       style: {
+        width: 300,
+        height: Math.max(80, 60 + group.columns.length * 50),
         zIndex: 1,
       }
     };
     
     nodes.push(datasetNode);
     
-    // Create column nodes positioned below the dataset
-    group.columns.forEach((column, columnIndex) => {
-      const columnY = datasetY + 120 + (columnIndex * 80);
-      
+    // Create column nodes - ELK will position relative to dataset
+    group.columns.forEach((column) => {
       const columnNode: Node = {
         id: column.id,
         type: 'column-field',
-        position: { x: datasetX + 10, y: columnY },
+        position: { x: 0, y: 0 }, // ELK will position this
         data: {
           id: column.id,
           fieldName: column.data.field,
@@ -106,17 +98,16 @@ export const createColumnLevelElements = (
           parentDatasetId: `dataset:${datasetKey}`,
           isHighlighted: selectedColumn === column.id,
         },
-        parentId: `dataset:${datasetKey}`,
-        extent: 'parent' as const,
+        // parentId and extent removed - we handle positioning manually in ELK layout
         style: {
+          width: 220,
+          height: 50,
           zIndex: 2,
         }
       };
       
       nodes.push(columnNode);
     });
-    
-    datasetIndex++;
   });
 
   // Create edges between columns
