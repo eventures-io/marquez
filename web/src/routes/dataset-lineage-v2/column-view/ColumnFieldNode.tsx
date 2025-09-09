@@ -21,7 +21,8 @@ const ColumnFieldNode: React.FC<NodeProps> = ({
   selected 
 }) => {
   const typedData = data as unknown as ColumnFieldNodeData;
-  const handleClick = () => {
+  const handleClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
     if (typedData.onNodeClick) {
       typedData.onNodeClick(typedData.id, typedData);
     }

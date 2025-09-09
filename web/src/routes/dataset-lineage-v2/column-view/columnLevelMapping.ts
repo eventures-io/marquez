@@ -33,7 +33,8 @@ interface DatasetGroup {
 // Transform column lineage API response to React Flow format
 export const createColumnLevelElements = (
   columnLineageData: ColumnLineageGraph,
-  selectedColumn?: string
+  selectedColumn?: string,
+  onNodeClick?: (nodeId: string, nodeData: any) => void
 ): { nodes: Node[], edges: Edge[] } => {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -99,6 +100,7 @@ export const createColumnLevelElements = (
           description: column.data.description,
           parentDatasetId: `dataset:${datasetKey}`,
           isHighlighted: selectedColumn === column.id,
+          onNodeClick,
         },
         // parentId and extent removed - we handle positioning manually in ELK layout
         style: {

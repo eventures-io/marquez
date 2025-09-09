@@ -46,6 +46,7 @@ const DatasetColumnLineageView: React.FC = () => {
     }
 
     try {
+      // We'll pass handleNodeClick from ColumnLevelFlow, for now just create elements
       const { nodes, edges } = createColumnLevelElements(columnLineageData, selectedColumn || undefined);
       return { nodes, edges };
     } catch (error) {

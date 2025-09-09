@@ -17,6 +17,7 @@ import ColumnDatasetNode from './ColumnDatasetNode';
 import ColumnFieldNode from './ColumnFieldNode';
 import ColumnLevelActionBar from './ColumnLevelActionBar';
 import DetailsPane from '../components/DetailsPane';
+import ColumnDetailsPane from '../components/ColumnDetailsPane';
 import useColumnDrawerState from './useColumnDrawerState';
 import useColumnELKLayout from './useColumnELKLayout';
 import { NodeType, LineageMode } from '@app-types';
@@ -74,8 +75,22 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     const applyLayout = async () => {
       if (columnLineageGraph) {
         try {
+          // Add onNodeClick handler to column nodes
+          const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
+            if (node.type === 'column-field') {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  onNodeClick: handleNodeClick,
+                }
+              };
+            }
+            return node;
+          });
+
           const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
-            columnLineageGraph.nodes,
+            nodesWithHandlers,
             columnLineageGraph.edges
           );
           setNodes(layoutedNodes);
@@ -83,14 +98,26 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         } catch (error) {
           console.error('Error applying ELK layout:', error);
           // Fallback to original positions
-          setNodes(columnLineageGraph.nodes);
+          const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
+            if (node.type === 'column-field') {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  onNodeClick: handleNodeClick,
+                }
+              };
+            }
+            return node;
+          });
+          setNodes(nodesWithHandlers);
           setEdges(columnLineageGraph.edges);
         }
       }
     };
     
     applyLayout();
-  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges]);
+  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick]);
 
   // Open drawer initially if requested (only once)
   useEffect(() => {
@@ -146,12 +173,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
             }
           }}
         >
-          <Box p={2}>
-            <h3>Column Details</h3>
-            {selectedNodeData && (
-              <pre>{JSON.stringify(selectedNodeData, null, 2)}</pre>
-            )}
-          </Box>
+          <ColumnDetailsPane columnData={selectedNodeData} />
         </DetailsPane>
 
         <ReactFlow
