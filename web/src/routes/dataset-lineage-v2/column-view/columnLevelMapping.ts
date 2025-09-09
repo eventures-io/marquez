@@ -75,7 +75,7 @@ export const createColumnLevelElements = (
       },
       style: {
         width: 300,
-        height: Math.max(80, 60 + group.columns.length * 50),
+        height: Math.max(120, 60 + group.columns.length * 60 + 40), // Extra height for spacing and bottom padding
         zIndex: 1,
       }
     };

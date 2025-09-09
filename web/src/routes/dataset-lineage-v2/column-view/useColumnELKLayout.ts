@@ -34,6 +34,12 @@ const useColumnELKLayout = () => {
     const datasetNodes = nodes.filter(n => n.type === 'dataset-container');
     const columnNodes = nodes.filter(n => n.type === 'column-field');
     
+    // Layout constants
+    const columnHeight = 50; // Height per column field
+    const columnSpacing = 10; // Vertical spacing between column fields  
+    const headerHeight = 60; // Space for dataset header
+    const bottomPadding = 20; // Bottom padding for container
+    
     // Build hierarchical ELK structure like the original implementation
     const elkDatasetNodes = datasetNodes.map(datasetNode => {
       // Find all column nodes that belong to this dataset
@@ -41,9 +47,8 @@ const useColumnELKLayout = () => {
         col.data?.parentDatasetId === datasetNode.id
       );
       
-      // Calculate dataset height dynamically based on child columns (match original calculation)
-      const columnHeight = 50; // Height per column field
-      const calculatedHeight = Math.max(80, 60 + childColumns.length * columnHeight);
+      // Calculate dataset height dynamically based on child columns with spacing and bottom padding
+      const calculatedHeight = Math.max(120, headerHeight + childColumns.length * (columnHeight + columnSpacing) + bottomPadding);
       
       return {
         id: datasetNode.id,
@@ -95,15 +100,19 @@ const useColumnELKLayout = () => {
             col.data?.parentDatasetId === datasetNode.id
           );
           
-          childColumns.forEach(columnNode => {
+          childColumns.forEach((columnNode, index) => {
             const elkColumn = elkDataset.children?.find(child => child.id === columnNode.id);
             if (elkColumn) {
+              // Instead of using ELK's child positioning (which can overflow),
+              // position children manually within container bounds with proper spacing
+              const childX = (elkDataset.x || 0) + 20; // Left padding
+              const childY = (elkDataset.y || 0) + headerHeight + (index * (columnHeight + columnSpacing));
+              
               layoutedNodes.push({
                 ...columnNode,
                 position: {
-                  // Position relative to parent dataset
-                  x: (elkDataset.x || 0) + (elkColumn.x || 0),
-                  y: (elkDataset.y || 0) + (elkColumn.y || 0),
+                  x: childX,
+                  y: childY,
                 },
               });
             }
