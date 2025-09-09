@@ -66,6 +66,7 @@ export const createColumnLevelElements = (
       id: `dataset:${datasetKey}`,
       type: 'dataset-container',
       position: { x: 0, y: 0 }, // ELK will position this
+      draggable: false, // Disable dragging
       data: {
         id: `dataset:${datasetKey}`,
         namespace: group.namespace,
@@ -88,6 +89,7 @@ export const createColumnLevelElements = (
         id: column.id,
         type: 'column-field',
         position: { x: 0, y: 0 }, // ELK will position this
+        draggable: false, // Disable dragging
         data: {
           id: column.id,
           fieldName: column.data.field,

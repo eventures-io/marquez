@@ -22,10 +22,11 @@ const layoutOptions = {
   'elk.layered.crossingMinimization.semiInteractive': 'false',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.nodeLabels.placement': '[H_CENTER, V_TOP, INSIDE]',
-  'elk.spacing.nodeNode': '40',
-  'elk.spacing.edgeNode': '20',
-  'elk.spacing.edgeEdge': '10',
-  'elk.padding': '[top=20,left=20,bottom=20,right=20]',
+  'elk.spacing.nodeNode': '100', // Significantly increased horizontal spacing
+  'elk.spacing.edgeNode': '40', // More space between edges and nodes
+  'elk.spacing.edgeEdge': '20', // More space between edges
+  'elk.layered.spacing.nodeNodeBetweenLayers': '100', // Force consistent spacing between layers
+  'elk.padding': '[top=30,left=30,bottom=30,right=30]',
 };
 
 const useColumnELKLayout = () => {
