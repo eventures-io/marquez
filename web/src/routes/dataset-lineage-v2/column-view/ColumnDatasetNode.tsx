@@ -26,7 +26,7 @@ const ColumnDatasetNode: React.FC<NodeProps> = ({
 
   const getNodeStyle = () => {
     return {
-      background: selected ? '#424242' : '#fff',
+      background: selected ? '#424242' : '#f5f5f5', // Light grey background
       borderColor: selected ? '#212121' : '#bbb',
       color: selected ? '#fff' : '#333',
     };
