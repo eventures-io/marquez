@@ -12,6 +12,7 @@ interface TableLevelNodeData {
   onNodeClick?: (id: string) => void;
   showPulsingHandle?: boolean;
   isDragEnabled?: boolean;
+  isRootNode?: boolean;
 }
 
 const TableLevelNode: React.FC<NodeProps> = ({ data, isConnectable, selected }) => {

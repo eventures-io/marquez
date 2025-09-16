@@ -1,11 +1,12 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import { NodeType } from '../types/lineage';
+import { EditableNodeData } from '../types/editableNodeData';
 import DatasetForm from './DatasetForm';
 import JobForm from './JobForm';
 
 interface EditFormProps {
-  selectedNodeData: any;
+  selectedNodeData: EditableNodeData;
   selectedNodeId: string | null;
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
@@ -26,11 +27,12 @@ const EditForm: React.FC<EditFormProps> = ({
   }
 
   const isDataset = selectedNodeData.type === NodeType.DATASET;
+  const isRootNode = selectedNodeData.isRootNode || false;
 
   return (
     <Box p={3} sx={{ width: '100%', maxWidth: 400 }}>
       <Typography variant="h6" sx={{ mb: 2, mt: 4 }}>
-        Edit {isDataset ? 'Dataset' : 'Job'}
+        Edit {isDataset ? 'Dataset' : 'Job'} {isRootNode && '(Root)'}
       </Typography>
 
       {isDataset ? (
@@ -39,12 +41,14 @@ const EditForm: React.FC<EditFormProps> = ({
           selectedNodeId={selectedNodeId}
           onUpdate={onUpdate}
           onClose={onClose}
+          isRootNode={isRootNode}
         />
       ) : (
         <JobForm
           selectedNodeData={selectedNodeData}
           onUpdate={onUpdate}
           onClose={onClose}
+          isRootNode={isRootNode}
         />
       )}
     </Box>

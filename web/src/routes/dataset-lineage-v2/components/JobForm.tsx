@@ -17,7 +17,8 @@ import {
 } from '@mui/material';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
-import { JobType } from '../types/lineage';
+import { JobType, NodeType } from '../types/lineage';
+import { EditableNodeData } from '../types/editableNodeData';
 
 interface JobFormData {
   label: string;
@@ -34,16 +35,19 @@ interface JobFormData {
   ownership: string;
 }
 
+
 interface JobFormProps {
-  selectedNodeData: any;
+  selectedNodeData: EditableNodeData;
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
+  isRootNode?: boolean;
 }
 
 const JobForm: React.FC<JobFormProps> = ({
   selectedNodeData,
   onUpdate,
   onClose,
+  isRootNode = false,
 }) => {
   const [formData, setFormData] = useState<JobFormData>({
     label: '',
@@ -146,12 +150,36 @@ const JobForm: React.FC<JobFormProps> = ({
 
   return (
     <Box>
+      {isRootNode && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 2 }}
+          icon={<ErrorOutlineIcon />}
+        >
+          This is the root job of your lineage. Changes to namespace and name will affect the entire lineage structure.
+        </Alert>
+      )}
+      
       <TextField
         fullWidth
         label="Namespace"
         value={formData.namespace}
         onChange={(e) => handleInputChange('namespace', e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 2,
+          ...(isRootNode && {
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#1976d2',
+                borderWidth: 2,
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: '#1976d2',
+              fontWeight: 'bold',
+            },
+          })
+        }}
         required
         error={hasSubmitted && !formData.namespace.trim()}
         helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : 'The namespace for this job'}
@@ -162,7 +190,21 @@ const JobForm: React.FC<JobFormProps> = ({
         label="Name"
         value={formData.name}
         onChange={(e) => handleInputChange('name', e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 2,
+          ...(isRootNode && {
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#1976d2',
+                borderWidth: 2,
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: '#1976d2',
+              fontWeight: 'bold',
+            },
+          })
+        }}
         required
         error={hasSubmitted && !formData.name.trim()}
         helperText={hasSubmitted && !formData.name.trim() ? 'Name is required' : ''}

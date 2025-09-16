@@ -117,6 +117,7 @@ const DatasetLineageEdit: React.FC = () => {
       data: {
         ...data,
         onNodeClick: dummyHandleNodeClick,
+        isRootNode: id === `dataset:${namespace}:${name}`,
       },
     }))
 

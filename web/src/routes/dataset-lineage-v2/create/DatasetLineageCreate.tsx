@@ -57,17 +57,32 @@ const DatasetLineageCreateNew: React.FC = () => {
     const dummyHandleNodeClick = () => {}
     const { nodes, edges } = toReactFlowFormat(dummyHandleNodeClick)
     
-    const enhancedNodes = nodes.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        showPulsingHandle: node.id === INITIAL_DATASET_ID && isInitialDatasetConfigured && !hasCreatedFirstJob,
-        isDragEnabled: node.id === INITIAL_DATASET_ID ? isInitialDatasetConfigured : true
+    const enhancedNodes = nodes.map(node => {
+      const nodeData = getNode(node.id)
+      let isNodeComplete = true
+      
+      // Check if node has complete namespace and name
+      if (nodeData) {
+        if (nodeData.type === NodeType.DATASET && nodeData.dataset) {
+          isNodeComplete = !!(nodeData.dataset.namespace?.trim() && nodeData.dataset.name?.trim())
+        } else if (nodeData.type === NodeType.JOB && nodeData.job) {
+          isNodeComplete = !!(nodeData.job.namespace?.trim() && nodeData.job.name?.trim())
+        }
       }
-    }))
+      
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          showPulsingHandle: node.id === INITIAL_DATASET_ID && isInitialDatasetConfigured && !hasCreatedFirstJob,
+          isDragEnabled: node.id === INITIAL_DATASET_ID ? isInitialDatasetConfigured : isNodeComplete,
+          isRootNode: node.id === INITIAL_DATASET_ID
+        }
+      }
+    })
 
     return { nodes: enhancedNodes, edges }
-  }, [lineageData, toReactFlowFormat, isInitialDatasetConfigured, hasCreatedFirstJob])
+  }, [lineageData, toReactFlowFormat, isInitialDatasetConfigured, hasCreatedFirstJob, getNode])
 
   useEffect(() => {
     if (initializedRef.current && (lineageData.nodes.size > 1 || lineageData.edges.size > 0)) {
@@ -101,6 +116,20 @@ const DatasetLineageCreateNew: React.FC = () => {
       return
     }
 
+    // Don't allow creation from nodes that don't have complete namespace and name
+    const sourceNode = getNode(sourceNodeId)
+    if (sourceNode && sourceNodeType === NodeType.DATASET) {
+      const dataset = sourceNode.dataset
+      if (!dataset?.namespace?.trim() || !dataset?.name?.trim()) {
+        return
+      }
+    } else if (sourceNode && sourceNodeType === NodeType.JOB) {
+      const job = sourceNode.job
+      if (!job?.namespace?.trim() || !job?.name?.trim()) {
+        return
+      }
+    }
+
     const newPosition = position
 
     if (sourceNodeType === NodeType.DATASET) {
@@ -123,7 +152,7 @@ const DatasetLineageCreateNew: React.FC = () => {
       const edgeId = `${sourceNodeId}-${id}`
       addLineageEdge(edgeId, sourceNodeId, id)
     }
-  }, [isInitialDatasetConfigured, createJobNode, createDatasetNode, addLineageEdge])
+  }, [isInitialDatasetConfigured, getNode, createJobNode, createDatasetNode, addLineageEdge])
 
 
   const handleEdgeCreate = useCallback((sourceId: string, targetId: string) => {

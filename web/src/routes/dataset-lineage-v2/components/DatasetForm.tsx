@@ -16,6 +16,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { DatasetType } from '../types/lineage';
+import { EditableNodeData } from '../types/editableNodeData';
 
 interface DatasetFormData {
   label: string;
@@ -27,11 +28,13 @@ interface DatasetFormData {
   fields: Array<{ name: string; type: string }>;
 }
 
+
 interface DatasetFormProps {
-  selectedNodeData: any;
+  selectedNodeData: EditableNodeData;
   selectedNodeId: string | null;
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
+  isRootNode?: boolean;
 }
 
 const DatasetForm: React.FC<DatasetFormProps> = ({
@@ -39,6 +42,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   selectedNodeId,
   onUpdate,
   onClose,
+  isRootNode = false,
 }) => {
   const [formData, setFormData] = useState<DatasetFormData>({
     label: '',
@@ -54,6 +58,9 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   const [newField, setNewField] = useState({ name: '', type: '' });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Check if this is a new node (nodes created in create mode are new)
+  const isNewNode = selectedNodeId && (selectedNodeId.startsWith('dataset-') && parseInt(selectedNodeId.split('-')[1]) > 1) || !selectedNodeData?.dataset?.namespace || !selectedNodeData?.dataset?.name;
 
 
   useEffect(() => {
@@ -147,15 +154,40 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
 
   return (
     <Box>
+      {isRootNode && (
+        <Alert 
+          severity="info" 
+          sx={{ mb: 2 }}
+          icon={<ErrorOutlineIcon />}
+        >
+          This is the root dataset of your lineage. Changes to namespace and name will affect the entire lineage structure.
+        </Alert>
+      )}
+      
       <TextField
         fullWidth
         label="Namespace"
         value={formData.namespace}
         onChange={(e) => handleInputChange('namespace', e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 2,
+          ...(isRootNode && {
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#1976d2',
+                borderWidth: 2,
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: '#1976d2',
+              fontWeight: 'bold',
+            },
+          })
+        }}
         required
+        disabled={!isNewNode}
         error={hasSubmitted && !formData.namespace.trim()}
-        helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : 'The namespace for this dataset'}
+        helperText={hasSubmitted && !formData.namespace.trim() ? 'Namespace is required' : isNewNode ? 'The namespace for this dataset' : 'Namespace cannot be changed for existing nodes'}
       />
 
       <TextField
@@ -163,10 +195,25 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         label="Name"
         value={formData.name}
         onChange={(e) => handleInputChange('name', e.target.value)}
-        sx={{ mb: 2 }}
+        sx={{ 
+          mb: 2,
+          ...(isRootNode && {
+            '& .MuiOutlinedInput-root': {
+              '& fieldset': {
+                borderColor: '#1976d2',
+                borderWidth: 2,
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: '#1976d2',
+              fontWeight: 'bold',
+            },
+          })
+        }}
         required
+        disabled={!isNewNode}
         error={hasSubmitted && !formData.name.trim()}
-        helperText={hasSubmitted && !formData.name.trim() ? 'Name is required' : ''}
+        helperText={hasSubmitted && !formData.name.trim() ? 'Name is required' : isNewNode ? '' : 'Name cannot be changed for existing nodes'}
       />
 
       <TextField
