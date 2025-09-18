@@ -90,47 +90,44 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   useEffect(() => {
     const applyLayout = async () => {
       if (columnLineageGraph) {
-        try {
-          // Add onNodeClick handler to nodes
-          // Use custom onNodeClick if provided (CREATE mode), otherwise use default handleNodeClick  
-          const nodeClickHandler = onNodeClick || handleNodeClick;
-          const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                onNodeClick: nodeClickHandler,
-              }
-            };
-          });
+        // Add onNodeClick handler to nodes
+        // Use custom onNodeClick if provided (CREATE mode), otherwise use default handleNodeClick  
+        const nodeClickHandler = onNodeClick || handleNodeClick;
+        const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              onNodeClick: nodeClickHandler,
+            }
+          };
+        });
 
-          const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
-            nodesWithHandlers,
-            columnLineageGraph.edges
-          );
-          setNodes(layoutedNodes);
-          setEdges(layoutedEdges);
-        } catch (error) {
-          console.error('Error applying ELK layout:', error);
-          // Fallback to original positions
-          const nodeClickHandler = onNodeClick || handleNodeClick;
-          const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                onNodeClick: nodeClickHandler,
-              }
-            };
-          });
+        // Skip ELK layout for CREATE mode - use manual positioning
+        if (mode === LineageMode.CREATE) {
           setNodes(nodesWithHandlers);
           setEdges(columnLineageGraph.edges);
+        } else {
+          // Use ELK layout for VIEW mode
+          try {
+            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
+              nodesWithHandlers,
+              columnLineageGraph.edges
+            );
+            setNodes(layoutedNodes);
+            setEdges(layoutedEdges);
+          } catch (error) {
+            console.error('Error applying ELK layout:', error);
+            // Fallback to original positions
+            setNodes(nodesWithHandlers);
+            setEdges(columnLineageGraph.edges);
+          }
         }
       }
     };
     
     applyLayout();
-  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick, onNodeClick]);
+  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick, onNodeClick, mode]);
 
   // Open drawer initially if requested (only once)
   useEffect(() => {

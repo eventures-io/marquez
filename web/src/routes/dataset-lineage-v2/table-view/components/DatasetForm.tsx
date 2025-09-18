@@ -81,6 +81,11 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
           type: field.type || 'string'
         })) || [],
       });
+      
+      // Reset the new field inputs and form validation state when switching datasets
+      setNewField({ name: '', type: '' });
+      setHasSubmitted(false);
+      setValidationErrors([]);
     }
   }, [selectedNodeData]);
 

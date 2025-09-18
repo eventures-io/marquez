@@ -14,6 +14,7 @@ const getDatasetId = () => `column-dataset-${datasetId++}`
 const ColumnLineageCreate: React.FC = () => {
   const {
     columnLineageData,
+    nodePositions,
     updateColumnNode,
     deleteColumnNode,
     updateColumnNodePosition,
@@ -121,15 +122,12 @@ const ColumnLineageCreate: React.FC = () => {
       // Create new dataset
       const id = getDatasetId()
       
-      // Calculate position for new dataset
+      // Position new datasets horizontally (left to right)
       const existingDatasets = Array.from(columnLineageData.nodes.values())
-        .filter(node => node.type === 'dataset-container')
+        .filter(n => n.type === 'dataset-container')
+      const xPosition = existingDatasets.length * 400 // 400px spacing between datasets
       
-      const xPosition = existingDatasets.length === 0 ? 50 : (existingDatasets.length * 400) + 50
-      const yPosition = 100
-      
-      // Create dataset with its columns
-      createColumnDatasetWithFields(id, { x: xPosition, y: yPosition }, datasetData)
+      createColumnDatasetWithFields(id, { x: xPosition, y: 50 }, datasetData)
       
       // Show floating button after first dataset
       setShowFloatingButton(true)
