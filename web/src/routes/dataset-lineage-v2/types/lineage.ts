@@ -58,6 +58,12 @@ export interface LineageJob {
   latestRun: Nullable<Run>
   parentJobName: Nullable<string>
   parentJobUuid: Nullable<string>
+  tags?: Tag[]
+  transformationCode?: string
+  sourceCodeLocation?: string
+  sourceCode?: string
+  sql?: string
+  ownership?: string
 }
 
 export interface LineageEdge {

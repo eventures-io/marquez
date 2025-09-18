@@ -74,7 +74,10 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
         description: entity?.description || '',
         type: entity?.type || '',
         tags: entity?.tags?.map((tag: any) => tag.name || tag) || [],
-        fields: entity?.fields || [],
+        fields: entity?.fields?.map(field => ({
+          name: field.name,
+          type: field.type || 'string'
+        })) || [],
       });
     }
   }, [selectedNodeData]);
