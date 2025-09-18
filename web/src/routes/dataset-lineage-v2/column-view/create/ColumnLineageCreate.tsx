@@ -63,7 +63,59 @@ const ColumnLineageCreate: React.FC = () => {
 
   const columnLineageGraph = React.useMemo(() => {
     const { nodes, edges } = toColumnReactFlowFormat(handleNodeClick)
-    return { nodes, edges }
+
+    // In CREATE mode only: increase dataset container height to account for
+    // larger vertical spacing between column fields (24px bottom margin),
+    // and re-space column field Y positions inside each dataset container.
+    const SPACING = 24
+    const FIELD_HEIGHT = 50
+    const TOP_OFFSET = 80
+    const LEFT_OFFSET = 40
+
+    // First, adjust container heights based on column counts
+    const adjustedNodes = nodes.map(n => {
+      if (n.type === 'dataset-container') {
+        const datasetId = n.id
+        const colCount = nodes.filter(
+          c => c.type === 'column-field' && c.data?.parentDatasetId === datasetId
+        ).length
+        const height = Math.max(150, 120 + colCount * (FIELD_HEIGHT + SPACING))
+        return {
+          ...n,
+          style: {
+            ...(n.style || {}),
+            height,
+          },
+        }
+      }
+      return n
+    })
+
+    // Then, re-space column nodes for each dataset container
+    const datasetIds = adjustedNodes
+      .filter(n => n.type === 'dataset-container')
+      .map(n => n.id)
+
+    // Compute new positions for column nodes per dataset
+    const newPositions = new Map<string, { x: number; y: number }>()
+    datasetIds.forEach(datasetId => {
+      const cols = adjustedNodes
+        .filter(n => n.type === 'column-field' && n.data?.parentDatasetId === datasetId)
+        .sort((a, b) => (a.position?.y || 0) - (b.position?.y || 0))
+      cols.forEach((col, index) => {
+        newPositions.set(col.id, {
+          x: LEFT_OFFSET,
+          y: TOP_OFFSET + index * (FIELD_HEIGHT + SPACING),
+        })
+      })
+    })
+
+    const nodesWithSpacing = adjustedNodes.map(n => {
+      const pos = newPositions.get(n.id)
+      return pos ? { ...n, position: { ...(n.position || { x: 0, y: 0 }), ...pos } } : n
+    })
+
+    return { nodes: nodesWithSpacing, edges }
   }, [columnLineageData, toColumnReactFlowFormat, handleNodeClick])
 
   useEffect(() => {
@@ -112,9 +164,9 @@ const ColumnLineageCreate: React.FC = () => {
           
           updateColumnNode(fieldId, fieldNodeData)
           // Position columns relative to parent dataset container
-          updateColumnNodePosition(fieldId, { 
-            x: 40,  // Relative to parent dataset container
-            y: 80 + (index * 60)  // Relative to parent dataset container
+          updateColumnNodePosition(fieldId, {
+            x: 40, // Relative to parent dataset container
+            y: 80 + index * (50 + 24), // Increase bottom margin between fields (24px)
           })
         })
       }
