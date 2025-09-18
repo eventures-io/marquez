@@ -1,28 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
-
-// Column lineage API response types (based on original implementation)
-interface ColumnLineageNode {
-  id: string;
-  data: {
-    namespace: string;
-    dataset: string;
-    field: string;
-    type?: string;
-    description?: string;
-  };
-  inEdges: Array<{
-    origin: string;
-    destination: string;
-  }>;
-  outEdges: Array<{
-    origin: string;
-    destination: string;
-  }>;
-}
-
-interface ColumnLineageGraph {
-  graph: ColumnLineageNode[];
-}
+import type { ColumnLineageGraph, ColumnLineageNode } from '../types/api';
 
 interface DatasetGroup {
   namespace: string;
@@ -46,7 +23,7 @@ export const createColumnLevelElements = (
   // Group columns by dataset
   const datasetGroups: Map<string, DatasetGroup> = new Map();
   
-  columnLineageData.graph.forEach(node => {
+  columnLineageData.graph.forEach((node: ColumnLineageNode) => {
     const datasetKey = `${node.data.namespace}:${node.data.dataset}`;
     
     if (!datasetGroups.has(datasetKey)) {
@@ -85,7 +62,8 @@ export const createColumnLevelElements = (
     nodes.push(datasetNode);
     
     // Create column nodes - ELK will position relative to dataset
-    group.columns.forEach((column) => {
+    group.columns.forEach((column: ColumnLineageNode) => {
+      const dataType = (column.data as any).fieldType || (column.data as any).type || undefined;
       const columnNode: Node = {
         id: column.id,
         type: 'column-field',
@@ -94,10 +72,10 @@ export const createColumnLevelElements = (
         data: {
           id: column.id,
           fieldName: column.data.field,
-          dataType: column.data.type,
+          dataType,
           namespace: column.data.namespace,
           datasetName: column.data.dataset,
-          description: column.data.description,
+          description: (column.data as any).description,
           parentDatasetId: `dataset:${datasetKey}`,
           isHighlighted: selectedColumn === column.id,
           onNodeClick,
@@ -115,8 +93,8 @@ export const createColumnLevelElements = (
   });
 
   // Create edges between columns
-  columnLineageData.graph.forEach(node => {
-    node.outEdges.forEach(edge => {
+  columnLineageData.graph.forEach((node: ColumnLineageNode) => {
+    (node.outEdges || []).forEach(edge => {
       const edgeId = `${edge.origin}-${edge.destination}`;
       
       // Determine if this edge is part of the highlighted path

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Box } from '@mui/material';
 import {
   ReactFlow,
@@ -7,7 +6,6 @@ import {
   ReactFlowProvider,
   Controls,
   MiniMap,
-  useReactFlow,
   useNodesState,
   useEdgesState,
   Node,
@@ -20,6 +18,7 @@ import DetailsPane from '../components/DetailsPane';
 import ColumnDetailsPane from './components/ColumnDetailsPane';
 import useColumnDrawerState from './useColumnDrawerState';
 import useColumnELKLayout from './useColumnELKLayout';
+import Toolbar from '../table-view/components/Toolbar';
 import { NodeType, LineageMode } from '@app-types';
 import '@xyflow/react/dist/style.css';
 
@@ -42,6 +41,7 @@ interface ColumnLevelFlowProps {
   onEdgeCreate?: (sourceId: string, targetId: string) => void;
   onEdgeDelete?: (edgeId: string) => void;
   onNodeClick?: (nodeId: string, nodeData: any) => void;
+  onNodePositionChange?: (nodeId: string, position: { x: number; y: number }) => void;
   loading?: boolean;
   error?: string | null;
   initialSelectionId?: string;
@@ -69,6 +69,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   onEdgeCreate,
   onEdgeDelete,
   onNodeClick,
+  onNodePositionChange,
   loading = false,
   error = null,
   initialSelectionId,
@@ -85,6 +86,45 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Only allow column-to-column connections in CREATE mode
+  const isValidConnection = useCallback((connection: { source?: string | null; target?: string | null }) => {
+    if (mode !== LineageMode.CREATE) return false;
+    const sourceNode = nodes.find((n) => n.id === connection.source);
+    const targetNode = nodes.find((n) => n.id === connection.target);
+    return !!sourceNode && !!targetNode && sourceNode.type === 'column-field' && targetNode.type === 'column-field';
+  }, [mode, nodes]);
+
+  const handleConnect = useCallback((connection: { source?: string | null; target?: string | null }) => {
+    if (mode !== LineageMode.CREATE) return;
+    const source = connection.source || '';
+    const target = connection.target || '';
+    if (!source || !target) return;
+
+    // Ensure connection is between column-field nodes
+    const sourceNode = nodes.find((n) => n.id === source);
+    const targetNode = nodes.find((n) => n.id === target);
+    if (!sourceNode || !targetNode || sourceNode.type !== 'column-field' || targetNode.type !== 'column-field') return;
+
+    onEdgeCreate && onEdgeCreate(source, target);
+  }, [mode, nodes, onEdgeCreate]);
+
+  const handleEdgesDelete = useCallback((deleted: Edge[]) => {
+    if (mode !== LineageMode.CREATE) return;
+    deleted.forEach((e) => onEdgeDelete && onEdgeDelete(e.id));
+  }, [mode, onEdgeDelete]);
+
+  // Mirror node drag updates back to caller (create-mode layout state)
+  const handleNodesChange = useCallback((changes: any[]) => {
+    onNodesChange(changes);
+    if (mode !== LineageMode.CREATE) return;
+    if (!Array.isArray(changes)) return;
+    changes.forEach((ch: any) => {
+      if (ch.type === 'position' && ch.position && typeof ch.id === 'string') {
+        onNodePositionChange && onNodePositionChange(ch.id, ch.position);
+      }
+    });
+  }, [onNodesChange, onNodePositionChange, mode]);
 
   // Update nodes and edges when columnLineageGraph changes
   useEffect(() => {
@@ -158,19 +198,21 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   return (
     <>
-      <ColumnLevelActionBar
-        nodeType={nodeType}
-        depth={depth}
-        setDepth={setDepth}
-        totalDatasets={totalDatasets}
-        totalColumns={totalColumns}
-        selectedColumn={selectedColumn}
-        mode={mode}
-        onSave={onSave}
-        isSaving={isSaving}
-        hasUnsavedChanges={hasUnsavedChanges}
-        canSaveLineage={canSaveLineage}
-      />
+      {mode !== LineageMode.CREATE && (
+        <ColumnLevelActionBar
+          nodeType={nodeType}
+          depth={depth}
+          setDepth={setDepth}
+          totalDatasets={totalDatasets}
+          totalColumns={totalColumns}
+          selectedColumn={selectedColumn}
+          mode={mode}
+          onSave={onSave}
+          isSaving={isSaving}
+          hasUnsavedChanges={hasUnsavedChanges}
+          canSaveLineage={canSaveLineage}
+        />
+      )}
       
       <Box 
         height={`calc(100vh - ${HEADER_HEIGHT}px - 60px)`}
@@ -194,20 +236,33 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
+          onConnect={handleConnect}
+          onEdgesDelete={handleEdgesDelete}
+          isValidConnection={isValidConnection}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
-          fitView
+          fitView={mode !== LineageMode.CREATE}
           fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
           style={{ width: '100%', height: '100%' }}
           className="react-flow"
         >
           <Background />
           <Controls />
-          <MiniMap />
+          {mode !== LineageMode.CREATE && <MiniMap />}
         </ReactFlow>
       </Box>
+
+      {/* Toolbar for edit/create modes */}
+      {mode !== LineageMode.VIEW && onSave && (
+        <Toolbar
+          isSaving={isSaving}
+          hasUnsavedChanges={hasUnsavedChanges}
+          canSaveLineage={!!canSaveLineage}
+          onSaveLineage={onSave}
+        />
+      )}
     </>
   );
 };

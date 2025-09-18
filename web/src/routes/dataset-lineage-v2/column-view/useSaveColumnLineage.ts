@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { ColumnLineageData } from './useColumnLineageData';
+import { LineageService } from '../services/LineageService';
 
 interface UseSaveColumnLineageReturn {
   isSaving: boolean;
@@ -75,20 +76,7 @@ export const useSaveColumnLineage = (): UseSaveColumnLineageReturn => {
 
     setIsSaving(true);
     try {
-      // TODO: Implement actual column lineage API call
-      // This would likely involve transforming the column lineage data
-      // into OpenLineage events with column-level transformation facets
-      
-      // For now, simulate a save operation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log('Column lineage to save:', {
-        datasets: Array.from(columnLineageData.nodes.values())
-          .filter(node => node.type === 'dataset-container'),
-        columns: Array.from(columnLineageData.nodes.values())
-          .filter(node => node.type === 'column-field'),
-        connections: Array.from(columnLineageData.edges.values()),
-      });
+      await LineageService.saveColumnLineage(columnLineageData);
       
       setHasUnsavedChanges(false);
       setShowSuccessDialog(true);

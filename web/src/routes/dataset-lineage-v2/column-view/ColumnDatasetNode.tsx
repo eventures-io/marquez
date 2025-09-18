@@ -58,18 +58,7 @@ const ColumnDatasetNode: React.FC<NodeProps> = ({
         position: 'relative',
       }}
     >
-      <Handle
-        type="target"
-        position={Position.Left}
-        isConnectable={true}
-        style={{ 
-          background: '#ccc',
-          width: 8,
-          height: 8,
-          border: '2px solid white',
-          opacity: 0.8,
-        }}
-      />
+      {/* Dataset nodes in column view are containers only; hide connection handles */}
 
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
         <Typography variant="caption" sx={{ fontSize: '10px', opacity: 0.8 }}>
@@ -100,18 +89,7 @@ const ColumnDatasetNode: React.FC<NodeProps> = ({
         </Typography>
       )}
 
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={true}
-        style={{ 
-          background: nodeStyle.borderColor,
-          width: 8,
-          height: 8,
-          border: '2px solid white',
-          opacity: 1,
-        }}
-      />
+      {/* No handles shown for dataset container nodes */}
     </div>
   );
 };

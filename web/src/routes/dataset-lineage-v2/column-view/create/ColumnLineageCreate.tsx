@@ -174,12 +174,68 @@ const ColumnLineageCreate: React.FC = () => {
       // Create new dataset
       const id = getDatasetId()
       
-      // Position new datasets horizontally (left to right)
+      // Position new datasets respecting current arrangement.
+      // If there are linked columns, place the new dataset to the right of the
+      // rightmost linked dataset and align its Y with that dataset. Otherwise,
+      // place to the right of the rightmost dataset.
       const existingDatasets = Array.from(columnLineageData.nodes.values())
         .filter(n => n.type === 'dataset-container')
-      const xPosition = existingDatasets.length * 400 // 400px spacing between datasets
+      // Place the first dataset near the left edge; subsequent ones spaced to the right of an anchor dataset
+      let xPosition = 16
       
-      createColumnDatasetWithFields(id, { x: xPosition, y: 50 }, datasetData)
+      // Center the first dataset vertically; subsequent datasets align to an anchor dataset's Y
+      let yPosition = 50
+      if (existingDatasets.length === 0) {
+        const FIELD_HEIGHT = 50
+        const SPACING = 24
+        const HEADER_OFFSET = 120 // top padding + header area inside container
+        const MIN_HEIGHT = 150
+        const VIEW_HEADER = 64 + 1 // matches ColumnLevelFlow HEADER_HEIGHT
+        const FLOW_FOOTER = 60 // extra space in the container height calc
+
+        const colCount = Array.isArray(datasetData?.dataset?.fields)
+          ? datasetData.dataset.fields.length
+          : 0
+        const desiredHeight = Math.max(MIN_HEIGHT, HEADER_OFFSET + colCount * (FIELD_HEIGHT + SPACING))
+        const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+        const containerHeight = Math.max(0, viewportHeight - VIEW_HEADER - FLOW_FOOTER)
+        yPosition = Math.max(16, Math.floor((containerHeight - desiredHeight) / 2))
+      } else {
+        // Determine anchor dataset: prefer rightmost among linked datasets; fallback to rightmost overall
+        const linkedDatasetIds = new Set<string>()
+        columnLineageData.edges.forEach(edge => {
+          const src = columnLineageData.nodes.get(edge.source)
+          const tgt = columnLineageData.nodes.get(edge.target)
+          if (src?.type === 'column-field' && src.data.parentDatasetId) {
+            linkedDatasetIds.add(src.data.parentDatasetId)
+          }
+          if (tgt?.type === 'column-field' && tgt.data.parentDatasetId) {
+            linkedDatasetIds.add(tgt.data.parentDatasetId)
+          }
+        })
+
+        const candidates = (linkedDatasetIds.size > 0
+          ? Array.from(linkedDatasetIds)
+          : existingDatasets.map(d => d.id))
+
+        let anchorId: string | null = null
+        let maxX = -Infinity
+        let anchorY = 50
+        candidates.forEach(id => {
+          const pos = nodePositions.get(id)
+          if (pos && pos.x >= maxX) {
+            maxX = pos.x
+            anchorId = id
+            anchorY = pos.y
+          }
+        })
+
+        // Position to the right of the anchor dataset with fixed spacing
+        xPosition = (isFinite(maxX) ? maxX : 16) + 400
+        yPosition = anchorY
+      }
+      
+      createColumnDatasetWithFields(id, { x: xPosition, y: yPosition }, datasetData)
       
       // Show floating button after first dataset
       setShowFloatingButton(true)
@@ -337,6 +393,7 @@ const ColumnLineageCreate: React.FC = () => {
         onEdgeDelete={handleEdgeDelete}
         onDelete={handleNodeDelete}
         onNodeClick={handleNodeClick}
+        onNodePositionChange={updateColumnNodePosition}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
         canSaveLineage={canSaveLineage()}
@@ -361,6 +418,7 @@ const ColumnLineageCreate: React.FC = () => {
             onUpdate={handleDatasetFormSave}
             onClose={handleDrawerClose}
             forceEditable={true}
+            requireAtLeastOneField={true}
           />
         </Box>
       </DetailsPane>
@@ -371,7 +429,7 @@ const ColumnLineageCreate: React.FC = () => {
           color="primary"
           sx={{
             position: 'fixed',
-            top: 90,
+            bottom: 88, // keep above bottom toolbar (60px) with extra spacing
             right: 24,
             zIndex: 1000,
           }}

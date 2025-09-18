@@ -36,6 +36,7 @@ interface DatasetFormProps {
   onClose?: () => void;
   isRootNode?: boolean;
   forceEditable?: boolean;
+  requireAtLeastOneField?: boolean;
 }
 
 const DatasetForm: React.FC<DatasetFormProps> = ({
@@ -45,6 +46,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   onClose,
   isRootNode = false,
   forceEditable = false,
+  requireAtLeastOneField = false,
 }) => {
   const [formData, setFormData] = useState<DatasetFormData>({
     label: '',
@@ -126,6 +128,13 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
     
     if (!formData.name.trim()) {
       errors.push('Please fill in all required fields');
+    }
+
+    // Require at least one column/field if requested
+    const hasExistingFields = (formData.fields && formData.fields.length > 0);
+    const hasPendingNewField = newField.name.trim() && newField.type.trim();
+    if (requireAtLeastOneField && !(hasExistingFields || hasPendingNewField)) {
+      errors.push('Add at least one column before saving');
     }
     
     // Remove duplicates
