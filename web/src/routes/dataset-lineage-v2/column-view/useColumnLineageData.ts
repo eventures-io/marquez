@@ -42,6 +42,7 @@ interface UseColumnLineageDataReturn {
   toColumnReactFlowFormat: (onNodeClick: (nodeId: string, nodeData: any) => void) => { nodes: Node[], edges: Edge[] };
   createColumnDatasetNode: (id: string, position: { x: number; y: number }, namespace: string) => void;
   createColumnFieldNode: (id: string, position: { x: number; y: number }, namespace: string, datasetName: string, parentDatasetId: string) => void;
+  createColumnDatasetWithFields: (id: string, position: { x: number; y: number }, datasetData: any) => void;
   initializeWithDefaults: (callback: () => void) => void;
   previewCascadeDelete: (nodeId: string) => { isRootNode: boolean; affectedNodes: string[] };
 }
@@ -116,6 +117,16 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
     return columnLineageData.nodes.get(nodeId);
   }, [columnLineageData.nodes]);
 
+  const getColumnCountForDataset = useCallback((datasetId: string): number => {
+    let count = 0;
+    for (const [, node] of columnLineageData.nodes) {
+      if (node.type === 'column-field' && node.data.parentDatasetId === datasetId) {
+        count++;
+      }
+    }
+    return count;
+  }, [columnLineageData.nodes]);
+
   const toColumnReactFlowFormat = useCallback((onNodeClick: (nodeId: string, nodeData: any) => void) => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
@@ -134,9 +145,22 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
         },
         style: {
           width: nodeData.type === 'dataset-container' ? 300 : 220,
-          height: nodeData.type === 'dataset-container' ? 150 : 50,
+          height: nodeData.type === 'dataset-container' ? 
+            Math.max(150, 120 + (getColumnCountForDataset(nodeId) * 60)) : 50,
+          zIndex: nodeData.type === 'dataset-container' ? -1 : 1,
         },
       };
+
+      // Configure dragging and parent-child relationships
+      if (nodeData.type === 'dataset-container') {
+        // Dataset containers are draggable
+        reactFlowNode.draggable = true;
+      } else if (nodeData.type === 'column-field') {
+        // Column fields are children of dataset containers
+        reactFlowNode.parentId = nodeData.data.parentDatasetId;
+        reactFlowNode.extent = 'parent';
+        reactFlowNode.draggable = false;
+      }
       
       nodes.push(reactFlowNode);
     }
@@ -154,7 +178,7 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
     }
 
     return { nodes, edges };
-  }, [columnLineageData, nodePositions]);
+  }, [columnLineageData, nodePositions, getColumnCountForDataset]);
 
   const createColumnDatasetNode = useCallback((id: string, position: { x: number; y: number }, namespace: string) => {
     const nodeData: ColumnLineageNodeData = {
@@ -193,6 +217,53 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
     
     updateColumnNode(id, nodeData);
     updateColumnNodePosition(id, position);
+  }, [updateColumnNode, updateColumnNodePosition]);
+
+  const createColumnDatasetWithFields = useCallback((
+    id: string, 
+    position: { x: number; y: number }, 
+    datasetData: any
+  ) => {
+    // Create dataset container node
+    const datasetNodeData: ColumnLineageNodeData = {
+      id,
+      type: 'dataset-container',
+      data: {
+        id,
+        namespace: datasetData.dataset.namespace,
+        name: datasetData.dataset.name,
+        description: datasetData.dataset.description,
+      },
+    };
+    
+    updateColumnNode(id, datasetNodeData);
+    updateColumnNodePosition(id, position);
+
+    // Create column field nodes for each field
+    if (datasetData.dataset.fields && datasetData.dataset.fields.length > 0) {
+      datasetData.dataset.fields.forEach((field: any, index: number) => {
+        const fieldId = `${id}-field-${index}`;
+        const fieldNodeData: ColumnLineageNodeData = {
+          id: fieldId,
+          type: 'column-field',
+          data: {
+            id: fieldId,
+            namespace: datasetData.dataset.namespace,
+            datasetName: datasetData.dataset.name,
+            fieldName: field.name,
+            dataType: field.type,
+            parentDatasetId: id,
+          },
+        };
+        
+        updateColumnNode(fieldId, fieldNodeData);
+        // Position columns relative to parent (dataset container)
+        updateColumnNodePosition(fieldId, { 
+          x: 40,  // Relative to parent dataset container
+          y: 80 + (index * 60)  // Relative to parent dataset container
+        });
+      });
+    }
   }, [updateColumnNode, updateColumnNodePosition]);
 
   const initializeWithDefaults = useCallback((callback: () => void) => {
@@ -239,6 +310,7 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
     toColumnReactFlowFormat,
     createColumnDatasetNode,
     createColumnFieldNode,
+    createColumnDatasetWithFields,
     initializeWithDefaults,
     previewCascadeDelete,
   };

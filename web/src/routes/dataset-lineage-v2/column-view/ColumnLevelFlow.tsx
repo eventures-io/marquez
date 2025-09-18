@@ -41,6 +41,7 @@ interface ColumnLevelFlowProps {
   onDatasetCreate?: (position: { x: number; y: number }) => void;
   onEdgeCreate?: (sourceId: string, targetId: string) => void;
   onEdgeDelete?: (edgeId: string) => void;
+  onNodeClick?: (nodeId: string, nodeData: any) => void;
   loading?: boolean;
   error?: string | null;
   initialSelectionId?: string;
@@ -67,6 +68,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   onDatasetCreate,
   onEdgeCreate,
   onEdgeDelete,
+  onNodeClick,
   loading = false,
   error = null,
   initialSelectionId,
@@ -89,18 +91,17 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     const applyLayout = async () => {
       if (columnLineageGraph) {
         try {
-          // Add onNodeClick handler to column nodes
+          // Add onNodeClick handler to nodes
+          // Use custom onNodeClick if provided (CREATE mode), otherwise use default handleNodeClick  
+          const nodeClickHandler = onNodeClick || handleNodeClick;
           const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
-            if (node.type === 'column-field') {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  onNodeClick: handleNodeClick,
-                }
-              };
-            }
-            return node;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                onNodeClick: nodeClickHandler,
+              }
+            };
           });
 
           const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
@@ -112,17 +113,15 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         } catch (error) {
           console.error('Error applying ELK layout:', error);
           // Fallback to original positions
+          const nodeClickHandler = onNodeClick || handleNodeClick;
           const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
-            if (node.type === 'column-field') {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  onNodeClick: handleNodeClick,
-                }
-              };
-            }
-            return node;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                onNodeClick: nodeClickHandler,
+              }
+            };
           });
           setNodes(nodesWithHandlers);
           setEdges(columnLineageGraph.edges);
@@ -131,7 +130,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     };
     
     applyLayout();
-  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick]);
+  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick, onNodeClick]);
 
   // Open drawer initially if requested (only once)
   useEffect(() => {

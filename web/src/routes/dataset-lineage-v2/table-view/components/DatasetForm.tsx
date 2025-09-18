@@ -35,6 +35,7 @@ interface DatasetFormProps {
   onUpdate: (updatedData: any) => void;
   onClose?: () => void;
   isRootNode?: boolean;
+  forceEditable?: boolean;
 }
 
 const DatasetForm: React.FC<DatasetFormProps> = ({
@@ -43,6 +44,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   onUpdate,
   onClose,
   isRootNode = false,
+  forceEditable = false,
 }) => {
   const [formData, setFormData] = useState<DatasetFormData>({
     label: '',
@@ -60,7 +62,7 @@ const DatasetForm: React.FC<DatasetFormProps> = ({
   const [hasSubmitted, setHasSubmitted] = useState(false);
 
   // Check if this is a new node (nodes created in create mode are new)
-  const isNewNode = selectedNodeId && (selectedNodeId.startsWith('dataset-') && parseInt(selectedNodeId.split('-')[1]) > 1) || !selectedNodeData?.dataset?.namespace || !selectedNodeData?.dataset?.name;
+  const isNewNode = forceEditable || (selectedNodeId && (selectedNodeId.startsWith('dataset-') && parseInt(selectedNodeId.split('-')[1]) > 1) || !selectedNodeData?.dataset?.namespace || !selectedNodeData?.dataset?.name);
 
 
   useEffect(() => {

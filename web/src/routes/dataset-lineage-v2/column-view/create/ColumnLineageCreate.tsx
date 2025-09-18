@@ -1,12 +1,15 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react'
-import { LineageMode, NodeType } from '@app-types'
+import React, { useCallback, useState, useEffect } from 'react'
+import { Fab, Box, Typography } from '@mui/material'
+import { Add } from '@mui/icons-material'
+import { LineageMode, NodeType, DatasetType } from '@app-types'
 import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
+import DetailsPane from '../../components/DetailsPane'
+import DatasetForm from '../../table-view/components/DatasetForm'
 
-let nodeId = 2
-const getDatasetId = () => `column-dataset-${nodeId++}`
-const getColumnId = () => `column-field-${nodeId++}`
+let datasetId = 1
+const getDatasetId = () => `column-dataset-${datasetId++}`
 
 const ColumnLineageCreate: React.FC = () => {
   const {
@@ -16,11 +19,8 @@ const ColumnLineageCreate: React.FC = () => {
     updateColumnNodePosition,
     addColumnEdge,
     deleteColumnEdge,
-    getColumnNode,
     toColumnReactFlowFormat,
-    createColumnDatasetNode,
-    createColumnFieldNode,
-    initializeWithDefaults,
+    createColumnDatasetWithFields,
   } = useColumnLineageData()
 
   const {
@@ -30,111 +30,209 @@ const ColumnLineageCreate: React.FC = () => {
     setHasUnsavedChanges,
   } = useSaveColumnLineage()
 
-  const [isInitialDatasetConfigured, setIsInitialDatasetConfigured] = useState(false)
-  const [hasCreatedFirstColumn, setHasCreatedFirstColumn] = useState(false)
-  const initializedRef = useRef(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(true) // Start with drawer open
+  const [showFloatingButton, setShowFloatingButton] = useState(false)
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null)
 
-  // Initialize with default dataset
-  useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true
-      
-      initializeWithDefaults(() => {})
-      const header = 65
-      const toolbar = 60
-      const available = Math.max(200, window.innerHeight - header - toolbar)
-      const centerY = Math.round(available / 2)
-      updateColumnNodePosition('initial-dataset', { x: 50, y: centerY })
+  const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
+    console.log('handleNodeClick called:', { 
+      nodeId, 
+      nodeDataKeys: Object.keys(nodeData),
+      fullNodeData: nodeData 
+    })
+    
+    // Check if this is a dataset container by nodeId pattern
+    if (nodeId.startsWith('column-dataset-') && !nodeId.includes('-field-')) {
+      // Click on dataset container - edit this dataset
+      console.log('Clicking dataset container, setting selectedDatasetId:', nodeId)
+      setSelectedDatasetId(nodeId)
+      setIsDrawerOpen(true)
+    } else if (nodeId.includes('-field-')) {
+      // Click on column field - edit the parent dataset
+      const parentDatasetId = nodeData.parentDatasetId
+      console.log('Clicking column field, parent dataset:', parentDatasetId)
+      if (parentDatasetId) {
+        setSelectedDatasetId(parentDatasetId)
+        setIsDrawerOpen(true)
+      }
+    } else {
+      console.log('Unknown node type for nodeId:', nodeId)
     }
-  }, [initializeWithDefaults, updateColumnNodePosition])
+  }, [])
 
   const columnLineageGraph = React.useMemo(() => {
-    const dummyHandleNodeClick = () => {}
-    const { nodes, edges } = toColumnReactFlowFormat(dummyHandleNodeClick)
-    
-    const enhancedNodes = nodes.map(node => {
-      const nodeData = getColumnNode(node.id)
-      let isNodeComplete = true
-      
-      // Check if node has complete namespace and name
-      if (nodeData) {
-        if (nodeData.type === 'dataset-container' && nodeData.data) {
-          isNodeComplete = !!(nodeData.data.namespace?.trim() && nodeData.data.name?.trim())
-        } else if (nodeData.type === 'column-field' && nodeData.data) {
-          isNodeComplete = !!(nodeData.data.namespace?.trim() && nodeData.data.datasetName?.trim() && nodeData.data.fieldName?.trim())
-        }
-      }
-      
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          showPulsingHandle: node.id === 'initial-dataset' && isInitialDatasetConfigured && !hasCreatedFirstColumn,
-          isDragEnabled: node.id === 'initial-dataset' ? isInitialDatasetConfigured : isNodeComplete,
-          isRootNode: node.id === 'initial-dataset'
-        }
-      }
-    })
-
-    return { nodes: enhancedNodes, edges }
-  }, [columnLineageData, toColumnReactFlowFormat, isInitialDatasetConfigured, hasCreatedFirstColumn, getColumnNode])
+    const { nodes, edges } = toColumnReactFlowFormat(handleNodeClick)
+    return { nodes, edges }
+  }, [columnLineageData, toColumnReactFlowFormat, handleNodeClick])
 
   useEffect(() => {
-    if (initializedRef.current && (columnLineageData.nodes.size > 1 || columnLineageData.edges.size > 0)) {
+    if (columnLineageData.nodes.size > 0) {
       setHasUnsavedChanges(true)
     }
   }, [columnLineageData, setHasUnsavedChanges])
 
-  const handleNodeUpdate = useCallback((nodeId: string, updatedData: any) => {
-    const currentNode = getColumnNode(nodeId)
-    if (currentNode) {
-      const updatedNodeData = {
-        ...currentNode,
+  const handleDatasetFormSave = useCallback((datasetData: any) => {
+    if (selectedDatasetId) {
+      // Update existing dataset
+      updateColumnNode(selectedDatasetId, {
+        id: selectedDatasetId,
+        type: 'dataset-container',
         data: {
-          ...currentNode.data,
-          ...updatedData,
+          id: selectedDatasetId,
+          namespace: datasetData.dataset.namespace,
+          name: datasetData.dataset.name,
+          description: datasetData.dataset.description,
+        },
+      })
+      
+      // Update existing column fields if any
+      if (datasetData.dataset.fields && datasetData.dataset.fields.length > 0) {
+        // Remove existing fields first
+        const existingFields = Array.from(columnLineageData.nodes.values())
+          .filter(node => node.type === 'column-field' && node.data.parentDatasetId === selectedDatasetId)
+        
+        existingFields.forEach(field => deleteColumnNode(field.id))
+        
+        // Add updated fields
+        datasetData.dataset.fields.forEach((field: any, index: number) => {
+          const fieldId = `${selectedDatasetId}-field-${index}`
+          const fieldNodeData = {
+            id: fieldId,
+            type: 'column-field' as const,
+            data: {
+              id: fieldId,
+              namespace: datasetData.dataset.namespace,
+              datasetName: datasetData.dataset.name,
+              fieldName: field.name,
+              dataType: field.type,
+              parentDatasetId: selectedDatasetId,
+            },
+          }
+          
+          updateColumnNode(fieldId, fieldNodeData)
+          // Position columns relative to parent dataset container
+          updateColumnNodePosition(fieldId, { 
+            x: 40,  // Relative to parent dataset container
+            y: 80 + (index * 60)  // Relative to parent dataset container
+          })
+        })
+      }
+    } else {
+      // Create new dataset
+      const id = getDatasetId()
+      
+      // Calculate position for new dataset
+      const existingDatasets = Array.from(columnLineageData.nodes.values())
+        .filter(node => node.type === 'dataset-container')
+      
+      const xPosition = existingDatasets.length === 0 ? 50 : (existingDatasets.length * 400) + 50
+      const yPosition = 100
+      
+      // Create dataset with its columns
+      createColumnDatasetWithFields(id, { x: xPosition, y: yPosition }, datasetData)
+      
+      // Show floating button after first dataset
+      setShowFloatingButton(true)
+    }
+    
+    // Close drawer and clear selection
+    setIsDrawerOpen(false)
+    setSelectedDatasetId(null)
+  }, [selectedDatasetId, columnLineageData.nodes, createColumnDatasetWithFields, updateColumnNode, deleteColumnNode, updateColumnNodePosition])
+
+  const handleFloatingButtonClick = useCallback(() => {
+    setSelectedDatasetId(null) // Clear selection for creating new dataset
+    setIsDrawerOpen(true)
+  }, [])
+
+  const handleDrawerClose = useCallback(() => {
+    // Only allow closing if we have at least one dataset
+    if (columnLineageData.nodes.size > 0) {
+      setIsDrawerOpen(false)
+      setSelectedDatasetId(null) // Clear selection on close
+    }
+  }, [columnLineageData.nodes.size])
+
+  const getSelectedDatasetData = useCallback(() => {
+    if (!selectedDatasetId) {
+      // Return empty structure for new dataset creation
+      return {
+        id: '',
+        label: '',
+        type: NodeType.DATASET,
+        dataset: {
+          id: { namespace: '', name: '' },
+          namespace: '',
+          name: '',
+          description: '',
+          fields: [],
+          type: DatasetType.DB_TABLE,
+          physicalName: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          sourceName: '',
+          facets: {},
+          tags: [],
+          lastModifiedAt: new Date().toISOString()
         }
       }
-      
-      updateColumnNode(nodeId, updatedNodeData)
-
-      if (nodeId === 'initial-dataset' && updatedData.namespace && updatedData.name) {
-        setIsInitialDatasetConfigured(true)
+    }
+    
+    const datasetNode = columnLineageData.nodes.get(selectedDatasetId)
+    if (!datasetNode || datasetNode.type !== 'dataset-container') {
+      return {
+        id: '',
+        label: '',
+        type: NodeType.DATASET,
+        dataset: {
+          id: { namespace: '', name: '' },
+          namespace: '',
+          name: '',
+          description: '',
+          fields: [],
+          type: DatasetType.DB_TABLE,
+          physicalName: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          sourceName: '',
+          facets: {},
+          tags: [],
+          lastModifiedAt: new Date().toISOString()
+        }
       }
     }
-  }, [getColumnNode, updateColumnNode])
-
-  const handleColumnCreate = useCallback((sourceDatasetId: string, position: { x: number; y: number }) => {
-    // Don't allow creation until initial dataset is configured
-    if (!isInitialDatasetConfigured && sourceDatasetId === 'initial-dataset') {
-      return
-    }
-
-    // Don't allow creation from datasets that don't have complete namespace and name
-    const sourceNode = getColumnNode(sourceDatasetId)
-    if (sourceNode && sourceNode.type === 'dataset-container') {
-      const dataset = sourceNode.data
-      if (!dataset?.namespace?.trim() || !dataset?.name?.trim()) {
-        return
+    
+    // Get all column fields for this dataset
+    const columnFields = Array.from(columnLineageData.nodes.values())
+      .filter(node => node.type === 'column-field' && node.data.parentDatasetId === selectedDatasetId)
+      .map(field => ({
+        name: field.data.fieldName || '',
+        type: field.data.dataType || 'string',
+        tags: [],
+        description: ''
+      }))
+    
+    return {
+      id: selectedDatasetId,
+      label: datasetNode.data.name || '',
+      type: NodeType.DATASET,
+      dataset: {
+        id: { namespace: datasetNode.data.namespace || '', name: datasetNode.data.name || '' },
+        namespace: datasetNode.data.namespace || '',
+        name: datasetNode.data.name || '',
+        description: datasetNode.data.description || '',
+        fields: columnFields,
+        type: DatasetType.DB_TABLE,
+        physicalName: datasetNode.data.name || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sourceName: '',
+        facets: {},
+        tags: [],
+        lastModifiedAt: new Date().toISOString()
       }
     }
-
-    const id = getColumnId()
-    const sourceDataset = getColumnNode(sourceDatasetId)
-    const namespace = sourceDataset?.data?.namespace || ''
-    const datasetName = sourceDataset?.data?.name || ''
-    
-    setHasCreatedFirstColumn(true)
-    createColumnFieldNode(id, position, namespace, datasetName, sourceDatasetId)
-    
-  }, [isInitialDatasetConfigured, getColumnNode, createColumnFieldNode])
-
-  const handleDatasetCreate = useCallback((position: { x: number; y: number }) => {
-    const id = getDatasetId()
-    const namespace = ''
-    
-    createColumnDatasetNode(id, position, namespace)
-  }, [createColumnDatasetNode])
+  }, [selectedDatasetId, columnLineageData.nodes])
 
   const handleEdgeCreate = useCallback((sourceId: string, targetId: string) => {
     const edgeId = `${sourceId}-${targetId}`
@@ -160,44 +258,79 @@ const ColumnLineageCreate: React.FC = () => {
   }, [columnLineageData.nodes.size, isSaving])
 
   // Warn on page leave with unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault()
-        return 'You have unsaved changes. Are you sure you want to leave?'
-      }
-    }
-    
-    if (hasUnsavedChanges) {
-      window.addEventListener('beforeunload', handleBeforeUnload)
-    }
-    
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [hasUnsavedChanges])
+  // TODO: Re-enable this for production
+  // useEffect(() => {
+  //   const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  //     if (hasUnsavedChanges) {
+  //       e.preventDefault()
+  //       return 'You have unsaved changes. Are you sure you want to leave?'
+  //     }
+  //   }
+  //   
+  //   if (hasUnsavedChanges) {
+  //     window.addEventListener('beforeunload', handleBeforeUnload)
+  //   }
+  //   
+  //   return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  // }, [hasUnsavedChanges])
 
   return (
-    <ColumnLevelFlow 
-      mode={LineageMode.CREATE}
-      columnLineageGraph={columnLineageGraph}
-      nodeType={NodeType.DATASET}
-      depth={2}
-      setDepth={() => {}} 
-      onUpdate={handleNodeUpdate}
-      onSave={handleSave}
-      onColumnCreate={handleColumnCreate}
-      onDatasetCreate={handleDatasetCreate}
-      onEdgeCreate={handleEdgeCreate}
-      onEdgeDelete={handleEdgeDelete}
-      onDelete={handleNodeDelete}
-      initialSelectionId="initial-dataset"
-      isSaving={isSaving}
-      hasUnsavedChanges={hasUnsavedChanges}
-      canSaveLineage={canSaveLineage()}
-      loading={false}
-      error={null}
-      totalDatasets={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'dataset-container').length}
-      totalColumns={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field').length}
-    />
+    <Box sx={{ position: 'relative', height: '100vh' }}>
+      <ColumnLevelFlow 
+        mode={LineageMode.CREATE}
+        columnLineageGraph={columnLineageGraph}
+        nodeType={NodeType.DATASET}
+        depth={2}
+        setDepth={() => {}} 
+        onSave={handleSave}
+        onEdgeCreate={handleEdgeCreate}
+        onEdgeDelete={handleEdgeDelete}
+        onDelete={handleNodeDelete}
+        onNodeClick={handleNodeClick}
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canSaveLineage={canSaveLineage()}
+        loading={false}
+        error={null}
+        totalDatasets={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'dataset-container').length}
+        totalColumns={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field').length}
+      />
+
+      {/* Dataset Form Drawer */}
+      <DetailsPane 
+        open={isDrawerOpen} 
+        onClose={handleDrawerClose}
+      >
+        <Box p={3} sx={{ width: '100%', maxWidth: 400 }}>
+          <Typography variant="h6" sx={{ mb: 2, mt: 4 }}>
+            {selectedDatasetId ? 'Edit Dataset' : 'Create Dataset'}
+          </Typography>
+          <DatasetForm
+            selectedNodeData={getSelectedDatasetData()}
+            selectedNodeId={selectedDatasetId}
+            onUpdate={handleDatasetFormSave}
+            onClose={handleDrawerClose}
+            forceEditable={true}
+          />
+        </Box>
+      </DetailsPane>
+
+      {/* Floating Action Button */}
+      {showFloatingButton && (
+        <Fab
+          color="primary"
+          sx={{
+            position: 'fixed',
+            top: 90,
+            right: 24,
+            zIndex: 1000,
+          }}
+          onClick={handleFloatingButtonClick}
+        >
+          <Add />
+        </Fab>
+      )}
+    </Box>
   )
 }
 

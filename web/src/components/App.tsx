@@ -20,6 +20,7 @@ import DatasetLineageView from '../routes/dataset-lineage-v2/table-view/view/Dat
 import DatasetLineageEdit from '../routes/dataset-lineage-v2/table-view/edit/DatasetLineageEdit'
 import DatasetLineageCreate from '../routes/dataset-lineage-v2/table-view/create/DatasetLineageCreate'
 import DatasetColumnLineageView from '../routes/dataset-lineage-v2/column-view/DatasetColumnLineageView'
+import ColumnLineageCreate from '../routes/dataset-lineage-v2/column-view/create/ColumnLineageCreate'
 import Datasets from '../routes/datasets/Datasets'
 import Events from '../routes/events/Events'
 import Header from './header/Header'
@@ -100,6 +101,10 @@ const App = (): ReactElement => {
                     <Route 
                       path={'/v2/dataset/create'} 
                       element={<DatasetLineageCreate />} 
+                    />
+                    <Route 
+                      path={'/v2/dataset/column-create'} 
+                      element={<ColumnLineageCreate />} 
                     />
                     <Route path='*' element={<NotFound />} />
                   </Routes>
