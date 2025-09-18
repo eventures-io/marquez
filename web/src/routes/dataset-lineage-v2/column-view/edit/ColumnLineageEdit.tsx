@@ -274,7 +274,8 @@ const ColumnLineageEdit: React.FC = () => {
                     },
                   })
                   // Position new field below existing ones to avoid overlap in locked layout
-                  updateColumnNodePosition(fieldId, { x: 40, y: 80 + newIndex * (FIELD_HEIGHT + SPACING) })
+                  // Align with ELK-based layout: left padding 20, header offset 60
+                  updateColumnNodePosition(fieldId, { x: 20, y: 60 + newIndex * (FIELD_HEIGHT + SPACING) })
                   newIndex += 1
                 }
               })

@@ -84,6 +84,10 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
                 onNodeClick: (nodeId: string) => onNodeClick(nodeId, incoming.data),
               },
             }
+            // Merge styles so updated container heights apply after adding columns
+            if (incoming.style || existing?.style) {
+              m.style = { ...(existing?.style || {}), ...(incoming.style || {}) }
+            }
             // Keep children as RF children so they move with the container in edit/view
             if (m.type === 'column-field') {
               const parentId = (m.data as any)?.parentDatasetId

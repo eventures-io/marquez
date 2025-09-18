@@ -145,8 +145,9 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
         },
         style: {
           width: nodeData.type === 'dataset-container' ? 300 : 220,
-          height: nodeData.type === 'dataset-container' ? 
-            Math.max(150, 120 + (getColumnCountForDataset(nodeId) * 60)) : 50,
+          height: nodeData.type === 'dataset-container'
+            ? Math.max(150, 120 + (getColumnCountForDataset(nodeId) * (50 + 24)))
+            : 50,
           zIndex: nodeData.type === 'dataset-container' ? -1 : 1,
         },
       };
