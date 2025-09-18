@@ -35,13 +35,20 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
             columnGraph.nodes,
             columnGraph.edges
           )
-          const withHandlers = layoutedNodes.map((n) => ({
-            ...n,
-            data: {
-              ...n.data,
-              onNodeClick: (nodeId: string) => onNodeClick(nodeId, n.data),
-            },
-          }))
+          const withHandlers = layoutedNodes.map((n) => {
+            const m: any = {
+              ...n,
+              data: {
+                ...n.data,
+                onNodeClick: (nodeId: string) => onNodeClick(nodeId, n.data),
+              },
+            }
+            if (m.type === 'column-field') {
+              delete m.parentId
+              delete m.extent
+            }
+            return m as Node
+          })
           setNodes(withHandlers)
           setEdges(layoutedEdges)
           if (lockELKLayout) hasAppliedLayoutRef.current = true
@@ -51,7 +58,7 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
           const merged = columnGraph.nodes.map((incoming: any) => {
             const existing = currentById.get(incoming.id)
             const position = existing?.position || incoming.position || { x: 0, y: 0 }
-            return {
+            const m: any = {
               ...(existing || incoming),
               id: incoming.id,
               position,
@@ -59,7 +66,12 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
                 ...incoming.data,
                 onNodeClick: (nodeId: string) => onNodeClick(nodeId, incoming.data),
               },
-            } as Node
+            }
+            if (m.type === 'column-field') {
+              delete m.parentId
+              delete m.extent
+            }
+            return m as Node
           })
           setNodes(merged)
           setEdges((columnGraph.edges || []) as Edge[])
@@ -75,4 +87,3 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
 }
 
 export default useColumnLayout
-

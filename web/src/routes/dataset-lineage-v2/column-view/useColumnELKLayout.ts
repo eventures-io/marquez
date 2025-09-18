@@ -37,7 +37,7 @@ const useColumnELKLayout = () => {
     
     // Layout constants
     const columnHeight = 50; // Height per column field
-    const columnSpacing = 10; // Vertical spacing between column fields  
+    const columnSpacing = 24; // Vertical spacing between column fields (match create/edit)
     const headerHeight = 60; // Space for dataset header
     const bottomPadding = 20; // Bottom padding for container
     
