@@ -145,6 +145,23 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     lockELKLayout: mode === LineageMode.EDIT,
   });
 
+  // In CREATE mode, map graph directly to RF state without ELK or fitView
+  useEffect(() => {
+    if (mode !== LineageMode.CREATE) return;
+    if (!columnLineageGraph) {
+      setNodes([]);
+      setEdges([]);
+      return;
+    }
+    const nodeClickHandler = onNodeClick || handleNodeClick;
+    const nodesWithHandlers = columnLineageGraph.nodes.map((n) => ({
+      ...n,
+      data: { ...n.data, onNodeClick: nodeClickHandler },
+    }));
+    setNodes(nodesWithHandlers as any);
+    setEdges(columnLineageGraph.edges as any);
+  }, [mode, columnLineageGraph, setNodes, setEdges, onNodeClick, handleNodeClick]);
+
   // Open drawer initially if requested (only once)
   useEffect(() => {
     if (!didAutoOpenRef.current && initialSelectionId && columnLineageGraph) {
