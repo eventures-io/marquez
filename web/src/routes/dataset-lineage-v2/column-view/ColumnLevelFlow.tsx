@@ -18,6 +18,7 @@ import DetailsPane from '../components/DetailsPane';
 import ColumnDetailsPane from './components/ColumnDetailsPane';
 import useColumnDrawerState from './useColumnDrawerState';
 import useColumnELKLayout from './useColumnELKLayout';
+import useColumnLayout from './useColumnLayout';
 import Toolbar from '../table-view/components/Toolbar';
 import { NodeType, LineageMode } from '@app-types';
 import '@xyflow/react/dist/style.css';
@@ -87,16 +88,16 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
-  // Only allow column-to-column connections in CREATE mode
+  // Allow column-to-column connections in CREATE and EDIT modes
   const isValidConnection = useCallback((connection: { source?: string | null; target?: string | null }) => {
-    if (mode !== LineageMode.CREATE) return false;
+    if (mode === LineageMode.VIEW) return false;
     const sourceNode = nodes.find((n) => n.id === connection.source);
     const targetNode = nodes.find((n) => n.id === connection.target);
     return !!sourceNode && !!targetNode && sourceNode.type === 'column-field' && targetNode.type === 'column-field';
   }, [mode, nodes]);
 
   const handleConnect = useCallback((connection: { source?: string | null; target?: string | null }) => {
-    if (mode !== LineageMode.CREATE) return;
+    if (mode === LineageMode.VIEW) return;
     const source = connection.source || '';
     const target = connection.target || '';
     if (!source || !target) return;
@@ -110,14 +111,14 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   }, [mode, nodes, onEdgeCreate]);
 
   const handleEdgesDelete = useCallback((deleted: Edge[]) => {
-    if (mode !== LineageMode.CREATE) return;
+    if (mode === LineageMode.VIEW) return;
     deleted.forEach((e) => onEdgeDelete && onEdgeDelete(e.id));
   }, [mode, onEdgeDelete]);
 
-  // Mirror node drag updates back to caller (create-mode layout state)
+  // Mirror node drag updates back to caller (create/edit modes)
   const handleNodesChange = useCallback((changes: any[]) => {
     onNodesChange(changes);
-    if (mode !== LineageMode.CREATE) return;
+    if (mode === LineageMode.VIEW) return;
     if (!Array.isArray(changes)) return;
     changes.forEach((ch: any) => {
       if (ch.type === 'position' && ch.position && typeof ch.id === 'string') {
@@ -126,48 +127,23 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     });
   }, [onNodesChange, onNodePositionChange, mode]);
 
-  // Update nodes and edges when columnLineageGraph changes
-  useEffect(() => {
-    const applyLayout = async () => {
-      if (columnLineageGraph) {
-        // Add onNodeClick handler to nodes
-        // Use custom onNodeClick if provided (CREATE mode), otherwise use default handleNodeClick  
-        const nodeClickHandler = onNodeClick || handleNodeClick;
-        const nodesWithHandlers = columnLineageGraph.nodes.map(node => {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              onNodeClick: nodeClickHandler,
-            }
-          };
-        });
+  // Compose graph with click handlers
+  const graphWithHandlers = React.useMemo(() => {
+    if (!columnLineageGraph) return null;
+    const nodeClickHandler = onNodeClick || handleNodeClick;
+    const nodes = columnLineageGraph.nodes.map(n => ({
+      ...n,
+      data: { ...n.data, onNodeClick: nodeClickHandler },
+    }));
+    return { nodes, edges: columnLineageGraph.edges };
+  }, [columnLineageGraph, onNodeClick, handleNodeClick]);
 
-        // Skip ELK layout for CREATE mode - use manual positioning
-        if (mode === LineageMode.CREATE) {
-          setNodes(nodesWithHandlers);
-          setEdges(columnLineageGraph.edges);
-        } else {
-          // Use ELK layout for VIEW mode
-          try {
-            const { nodes: layoutedNodes, edges: layoutedEdges } = await getLayoutedElements(
-              nodesWithHandlers,
-              columnLineageGraph.edges
-            );
-            setNodes(layoutedNodes);
-            setEdges(layoutedEdges);
-          } catch (error) {
-            console.error('Error applying ELK layout:', error);
-            // Fallback to original positions
-            setNodes(nodesWithHandlers);
-            setEdges(columnLineageGraph.edges);
-          }
-        }
-      }
-    };
-    
-    applyLayout();
-  }, [columnLineageGraph, getLayoutedElements, setNodes, setEdges, handleNodeClick, onNodeClick, mode]);
+  // Layout handling similar to table-level: ELK once then lock for EDIT, always for VIEW
+  const layout = useColumnLayout({
+    columnGraph: mode === LineageMode.CREATE ? null : graphWithHandlers,
+    onNodeClick: onNodeClick || handleNodeClick,
+    lockELKLayout: mode === LineageMode.EDIT,
+  });
 
   // Open drawer initially if requested (only once)
   useEffect(() => {
@@ -234,10 +210,10 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         </DetailsPane>
 
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
+          nodes={mode === LineageMode.CREATE ? nodes : layout.nodes}
+          edges={mode === LineageMode.CREATE ? edges : layout.edges}
+          onNodesChange={mode === LineageMode.CREATE ? handleNodesChange : layout.onNodesChange}
+          onEdgesChange={mode === LineageMode.CREATE ? onEdgesChange : layout.onEdgesChange}
           onConnect={handleConnect}
           onEdgesDelete={handleEdgesDelete}
           isValidConnection={isValidConnection}
