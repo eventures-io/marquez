@@ -35,6 +35,13 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
             columnGraph.nodes,
             columnGraph.edges
           )
+          // Build map of dataset container positions for relative conversion
+          const datasetPos = new Map<string, { x: number; y: number }>()
+          layoutedNodes.forEach((n) => {
+            if ((n as any).type === 'dataset-container') {
+              datasetPos.set(n.id, { x: n.position?.x || 0, y: n.position?.y || 0 })
+            }
+          })
           const withHandlers = layoutedNodes.map((n) => {
             const m: any = {
               ...n,
@@ -43,9 +50,20 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
                 onNodeClick: (nodeId: string) => onNodeClick(nodeId, n.data),
               },
             }
+            if (m.type === 'dataset-container') {
+              m.draggable = true
+            }
             if (m.type === 'column-field') {
-              delete m.parentId
-              delete m.extent
+              const parentId = (m.data as any)?.parentDatasetId
+              const p = parentId ? datasetPos.get(parentId) : undefined
+              if (parentId && p) {
+                // Convert absolute to relative and set as RF child
+                const abs = m.position || { x: 0, y: 0 }
+                m.parentId = parentId
+                m.extent = 'parent'
+                m.position = { x: (abs.x || 0) - p.x, y: (abs.y || 0) - p.y }
+                m.draggable = false
+              }
             }
             return m as Node
           })
@@ -57,19 +75,26 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
           const currentById = new Map(nodes.map((n) => [n.id, n] as const))
           const merged = columnGraph.nodes.map((incoming: any) => {
             const existing = currentById.get(incoming.id)
-            const position = existing?.position || incoming.position || { x: 0, y: 0 }
             const m: any = {
               ...(existing || incoming),
               id: incoming.id,
-              position,
+              position: existing?.position || incoming.position || { x: 0, y: 0 },
               data: {
                 ...incoming.data,
                 onNodeClick: (nodeId: string) => onNodeClick(nodeId, incoming.data),
               },
             }
+            // Keep children as RF children so they move with the container in edit/view
             if (m.type === 'column-field') {
-              delete m.parentId
-              delete m.extent
+              const parentId = (m.data as any)?.parentDatasetId
+              if (parentId) {
+                m.parentId = parentId
+                m.extent = 'parent'
+                m.draggable = false
+              }
+            }
+            if (m.type === 'dataset-container') {
+              m.draggable = true
             }
             return m as Node
           })
