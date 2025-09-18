@@ -1,6 +1,7 @@
 import React from 'react';
 import { FormControl, Select, MenuItem, SelectChangeEvent, Box, Typography } from '@mui/material';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { getColumnLineage } from '../../../store/requests/columnlineage';
 
 export type ViewType = 'table-view' | 'column-view';
 
@@ -17,8 +18,30 @@ const ViewSelector: React.FC<ViewSelectorProps> = ({
   const { namespace, name } = useParams<{ namespace: string; name: string }>();
   const location = useLocation();
 
+  const [columnViewEnabled, setColumnViewEnabled] = React.useState<boolean>(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const checkColumnLineage = async () => {
+      if (!namespace || !name) {
+        setColumnViewEnabled(false);
+        return;
+      }
+      try {
+        const res = await getColumnLineage('DATASET' as any, namespace, name, 1);
+        const hasGraph = Array.isArray(res?.graph) && res.graph.length > 0;
+        if (!cancelled) setColumnViewEnabled(hasGraph);
+      } catch (e) {
+        if (!cancelled) setColumnViewEnabled(false);
+      }
+    };
+    checkColumnLineage();
+    return () => { cancelled = true; };
+  }, [namespace, name]);
+
   const handleChange = (event: SelectChangeEvent<ViewType>) => {
     const newView = event.target.value as ViewType;
+    if (newView === 'column-view' && !columnViewEnabled) return;
     
     if (onViewChange) {
       onViewChange(newView);
@@ -63,7 +86,7 @@ const ViewSelector: React.FC<ViewSelectorProps> = ({
               <span>Table View</span>
             </Box>
           </MenuItem>
-          <MenuItem value="column-view">
+          <MenuItem value="column-view" disabled={!columnViewEnabled}>
             <Box display="flex" alignItems="center" gap={1}>
               <span>🔗</span>
               <span>Column View</span>
