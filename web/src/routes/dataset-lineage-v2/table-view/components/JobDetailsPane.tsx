@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { useJobDetails } from '../table-view/useJobDetails';
+import { useJobDetails } from '../useJobDetails';
 import DatasetDetailsPane from './DatasetDetailsPane';
 import { NodeType } from '@app-types';
 

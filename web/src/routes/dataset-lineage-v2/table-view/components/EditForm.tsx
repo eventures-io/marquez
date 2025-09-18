@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { NodeType } from '../types/lineage';
-import { EditableNodeData } from '../types/editableNodeData';
+import { NodeType } from '../../types/lineage';
+import { EditableNodeData } from '../../types/editableNodeData';
 import DatasetForm from './DatasetForm';
 import JobForm from './JobForm';
 

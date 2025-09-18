@@ -14,10 +14,10 @@ import {
   Edge,
   Connection,
 } from '@xyflow/react';
-import TableLevelNode from '../table-view/TableLevelNode';
-import { useLineageLayout } from '../table-view/useLineageLayout';
+import TableLevelNode from '../TableLevelNode';
+import { useLineageLayout } from '../useLineageLayout';
 import { NodeType } from '@app-types';
-import { computeNodeStyleFromData } from '../helpers/computeNodeStyle';
+import { computeNodeStyleFromData } from '../../helpers/computeNodeStyle';
 
 const nodeTypes = {
   tableLevel: TableLevelNode,

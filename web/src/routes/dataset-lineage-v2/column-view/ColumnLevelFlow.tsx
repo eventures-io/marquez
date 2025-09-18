@@ -17,7 +17,7 @@ import ColumnDatasetNode from './ColumnDatasetNode';
 import ColumnFieldNode from './ColumnFieldNode';
 import ColumnLevelActionBar from './ColumnLevelActionBar';
 import DetailsPane from '../components/DetailsPane';
-import ColumnDetailsPane from '../components/ColumnDetailsPane';
+import ColumnDetailsPane from './components/ColumnDetailsPane';
 import useColumnDrawerState from './useColumnDrawerState';
 import useColumnELKLayout from './useColumnELKLayout';
 import { NodeType, LineageMode } from '@app-types';
@@ -37,9 +37,16 @@ interface ColumnLevelFlowProps {
   onUpdate?: (nodeId: string, data: any) => void;
   onSave?: () => void;
   onDelete?: (nodeId: string) => void;
+  onColumnCreate?: (sourceDatasetId: string, position: { x: number; y: number }) => void;
+  onDatasetCreate?: (position: { x: number; y: number }) => void;
+  onEdgeCreate?: (sourceId: string, targetId: string) => void;
+  onEdgeDelete?: (edgeId: string) => void;
   loading?: boolean;
   error?: string | null;
   initialSelectionId?: string;
+  isSaving?: boolean;
+  hasUnsavedChanges?: boolean;
+  canSaveLineage?: boolean;
   totalDatasets?: number;
   totalColumns?: number;
   selectedColumn?: string;
@@ -56,9 +63,16 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   onUpdate,
   onSave,
   onDelete,
+  onColumnCreate,
+  onDatasetCreate,
+  onEdgeCreate,
+  onEdgeDelete,
   loading = false,
   error = null,
   initialSelectionId,
+  isSaving = false,
+  hasUnsavedChanges = false,
+  canSaveLineage = false,
   totalDatasets = 0,
   totalColumns = 0,
   selectedColumn,
@@ -155,6 +169,11 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         totalDatasets={totalDatasets}
         totalColumns={totalColumns}
         selectedColumn={selectedColumn}
+        mode={mode}
+        onSave={onSave}
+        isSaving={isSaving}
+        hasUnsavedChanges={hasUnsavedChanges}
+        canSaveLineage={canSaveLineage}
       />
       
       <Box 
