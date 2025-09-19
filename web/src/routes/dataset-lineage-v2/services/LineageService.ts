@@ -255,7 +255,7 @@ export class LineageService {
    * event. If exactly one producing job exists for that dataset, reuse its identity; otherwise
    * emit a synthetic job name.
    */
-  static async saveColumnLineage(columnLineageData: ColumnLineageData): Promise<void> {
+  static async saveColumnLineage(columnLineageData: ColumnLineageData, nodePositions?: Map<string, { x: number; y: number }>): Promise<void> {
     // Index datasets and their fields from local column nodes
     const datasetNodes = Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'dataset-container');
     const columnNodes = Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field');
@@ -273,9 +273,16 @@ export class LineageService {
       const ns = (d.data as any)?.namespace || '';
       const nm = (d.data as any)?.name || '';
       const desc = (d.data as any)?.description || '';
-      const fields = columnNodes
-        .filter(c => (c.data as any)?.parentDatasetId === d.id)
-        .map(c => ({ name: (c.data as any)?.fieldName || '', type: (c.data as any)?.dataType || 'unknown' }));
+      let childCols = columnNodes.filter(c => (c.data as any)?.parentDatasetId === d.id);
+      // Sort child columns by Y position (UI stacking order) if positions provided
+      if (nodePositions && childCols.length > 1) {
+        childCols = childCols.slice().sort((a, b) => {
+          const ay = nodePositions.get(a.id)?.y ?? 0;
+          const by = nodePositions.get(b.id)?.y ?? 0;
+          return ay - by;
+        });
+      }
+      const fields = childCols.map(c => ({ name: (c.data as any)?.fieldName || '', type: (c.data as any)?.dataType || 'unknown' }));
       datasetsById.set(d.id, { id: d.id, namespace: ns, name: nm, description: desc, fields });
     }
 
@@ -352,6 +359,34 @@ export class LineageService {
       }));
 
       // Build output with schema + columnLineage facet
+      // Ensure target field order follows UI stacking (via sorted child columns)
+      let orderedTargetFields: string[] = [];
+      {
+        const childCols = columnNodes.filter(c => (c.data as any)?.parentDatasetId === tgtDatasetId);
+        if (nodePositions && childCols.length > 1) {
+          orderedTargetFields = childCols
+            .slice()
+            .sort((a, b) => (nodePositions.get(a.id)?.y ?? 0) - (nodePositions.get(b.id)?.y ?? 0))
+            .map(c => (c.data as any)?.fieldName || '')
+            .filter(Boolean);
+        } else {
+          orderedTargetFields = Object.keys(fieldsMap);
+        }
+      }
+      // Rebuild fields map preserving the intended order
+      const orderedFieldsMap: Record<string, { inputFields: { namespace: string; name: string; field: string }[] }> = {};
+      orderedTargetFields.forEach((fname) => {
+        if (fieldsMap[fname]) {
+          orderedFieldsMap[fname] = fieldsMap[fname];
+        }
+      });
+      // Include any remaining fields not in ordered list
+      Object.keys(fieldsMap).forEach((fname) => {
+        if (!orderedFieldsMap[fname]) {
+          orderedFieldsMap[fname] = fieldsMap[fname];
+        }
+      });
+
       const outputs = [{
         namespace: tgtDataset.namespace,
         name: tgtDataset.name,
@@ -371,7 +406,7 @@ export class LineageService {
           columnLineage: {
             _producer: 'https://github.com/MarquezProject/marquez-ui',
             _schemaURL: 'https://openlineage.io/spec/facets/1-0-1/ColumnLineageDatasetFacet.json',
-            fields: fieldsMap
+            fields: orderedFieldsMap
           } as any
         }
       }];

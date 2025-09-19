@@ -356,7 +356,7 @@ const ColumnLineageCreate: React.FC = () => {
   }, [deleteColumnEdge, setHasUnsavedChanges])
 
   const handleSave = async () => {
-    await saveColumnLineage(columnLineageData)
+    await saveColumnLineage(columnLineageData, nodePositions)
   }
 
   const canSaveLineage = useCallback(() => {

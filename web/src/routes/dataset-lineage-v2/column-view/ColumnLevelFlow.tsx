@@ -89,26 +89,9 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   // Allow column-to-column connections in CREATE and EDIT modes
-  const isValidConnection = useCallback((connection: { source?: string | null; target?: string | null }) => {
-    if (mode === LineageMode.VIEW) return false;
-    const sourceNode = nodes.find((n) => n.id === connection.source);
-    const targetNode = nodes.find((n) => n.id === connection.target);
-    return !!sourceNode && !!targetNode && sourceNode.type === 'column-field' && targetNode.type === 'column-field';
-  }, [mode, nodes]);
-
-  const handleConnect = useCallback((connection: { source?: string | null; target?: string | null }) => {
-    if (mode === LineageMode.VIEW) return;
-    const source = connection.source || '';
-    const target = connection.target || '';
-    if (!source || !target) return;
-
-    // Ensure connection is between column-field nodes
-    const sourceNode = nodes.find((n) => n.id === source);
-    const targetNode = nodes.find((n) => n.id === target);
-    if (!sourceNode || !targetNode || sourceNode.type !== 'column-field' || targetNode.type !== 'column-field') return;
-
-    onEdgeCreate && onEdgeCreate(source, target);
-  }, [mode, nodes, onEdgeCreate]);
+  // (Definitions moved below layout to avoid TS ordering issues)
+  const isValidConnectionRef = useRef<(conn: { source?: string | null; target?: string | null }) => boolean>();
+  const handleConnectRef = useRef<(conn: { source?: string | null; target?: string | null }) => void>();
 
   const handleEdgesDelete = useCallback((deleted: Edge[]) => {
     if (mode === LineageMode.VIEW) return;
@@ -144,6 +127,27 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     onNodeClick: onNodeClick || handleNodeClick,
     lockELKLayout: mode === LineageMode.EDIT,
   });
+
+  // Define connection guards/handlers now that layout is available
+  const getCurrentNodes = () => (mode === LineageMode.CREATE ? nodes : (layout.nodes || []));
+  isValidConnectionRef.current = (connection) => {
+    if (mode === LineageMode.VIEW) return false;
+    const current = getCurrentNodes();
+    const sourceNode = current.find((n) => n.id === connection.source);
+    const targetNode = current.find((n) => n.id === connection.target);
+    return !!sourceNode && !!targetNode && sourceNode.type === 'column-field' && targetNode.type === 'column-field';
+  };
+  handleConnectRef.current = (connection) => {
+    if (mode === LineageMode.VIEW) return;
+    const source = connection.source || '';
+    const target = connection.target || '';
+    if (!source || !target) return;
+    const current = getCurrentNodes();
+    const sourceNode = current.find((n) => n.id === source);
+    const targetNode = current.find((n) => n.id === target);
+    if (!sourceNode || !targetNode || sourceNode.type !== 'column-field' || targetNode.type !== 'column-field') return;
+    onEdgeCreate && onEdgeCreate(source, target);
+  };
 
   // In CREATE mode, map graph directly to RF state without ELK or fitView
   useEffect(() => {
@@ -231,9 +235,9 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
           edges={mode === LineageMode.CREATE ? edges : layout.edges}
           onNodesChange={mode === LineageMode.CREATE ? handleNodesChange : layout.onNodesChange}
           onEdgesChange={mode === LineageMode.CREATE ? onEdgesChange : layout.onEdgesChange}
-          onConnect={handleConnect}
+          onConnect={(c) => handleConnectRef.current && handleConnectRef.current(c)}
           onEdgesDelete={handleEdgesDelete}
-          isValidConnection={isValidConnection}
+          isValidConnection={(c) => (isValidConnectionRef.current ? isValidConnectionRef.current(c) : false)}
           onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           fitView={mode !== LineageMode.CREATE}

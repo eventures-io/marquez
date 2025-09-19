@@ -19,6 +19,7 @@ const ColumnLineageEdit: React.FC = () => {
 
   const {
     columnLineageData,
+    nodePositions,
     updateColumnNode,
     deleteColumnNode,
     updateColumnNodePosition,
@@ -121,8 +122,8 @@ const ColumnLineageEdit: React.FC = () => {
   }, [deleteColumnEdge, setHasUnsavedChanges])
 
   const handleSave = useCallback(async () => {
-    await saveColumnLineage(columnLineageData)
-  }, [saveColumnLineage, columnLineageData])
+    await saveColumnLineage(columnLineageData, nodePositions)
+  }, [saveColumnLineage, columnLineageData, nodePositions])
 
   const graph = useMemo(() => {
     const { nodes, edges } = toColumnReactFlowFormat(() => {})

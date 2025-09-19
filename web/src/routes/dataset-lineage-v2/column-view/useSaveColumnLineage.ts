@@ -8,7 +8,7 @@ interface UseSaveColumnLineageReturn {
   showValidationErrors: boolean;
   validationErrors: string[];
   showSuccessDialog: boolean;
-  saveColumnLineage: (columnLineageData: ColumnLineageData) => Promise<void>;
+  saveColumnLineage: (columnLineageData: ColumnLineageData, nodePositions?: Map<string, { x: number; y: number }>) => Promise<void>;
   validateColumnLineage: (columnLineageData: ColumnLineageData) => boolean;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setShowValidationErrors: (show: boolean) => void;
@@ -68,7 +68,7 @@ export const useSaveColumnLineage = (): UseSaveColumnLineageReturn => {
     return errors.length === 0;
   }, []);
 
-  const saveColumnLineage = useCallback(async (columnLineageData: ColumnLineageData) => {
+  const saveColumnLineage = useCallback(async (columnLineageData: ColumnLineageData, nodePositions?: Map<string, { x: number; y: number }>) => {
     if (!validateColumnLineage(columnLineageData)) {
       setShowValidationErrors(true);
       return;
@@ -76,7 +76,8 @@ export const useSaveColumnLineage = (): UseSaveColumnLineageReturn => {
 
     setIsSaving(true);
     try {
-      await LineageService.saveColumnLineage(columnLineageData);
+      // Pass node positions so the service can preserve field order
+      await LineageService.saveColumnLineage(columnLineageData, nodePositions);
       
       setHasUnsavedChanges(false);
       setShowSuccessDialog(true);
