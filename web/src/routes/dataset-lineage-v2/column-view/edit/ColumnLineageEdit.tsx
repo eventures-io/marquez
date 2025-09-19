@@ -6,6 +6,7 @@ import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
 import { getColumnLineage } from '../../../../store/requests/columnlineage'
+import { createColumnLevelElements } from '../columnLevelMapping'
 import DetailsPane from '../../components/DetailsPane'
 import DatasetForm from '../../table-view/components/DatasetForm'
 
@@ -15,7 +16,8 @@ const ColumnLineageEdit: React.FC = () => {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 1)
+  const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
+  const [columnLineageApiData, setColumnLineageApiData] = useState<any>(null)
 
   const {
     columnLineageData,
@@ -39,7 +41,7 @@ const ColumnLineageEdit: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null)
 
-  // Load existing column lineage for dataset and map into editable state
+  // Load existing column lineage for dataset using the same API as the original view
   useEffect(() => {
     const load = async () => {
       if (!namespace || !name || initializedRef.current) return
@@ -47,8 +49,9 @@ const ColumnLineageEdit: React.FC = () => {
       setError(null)
       try {
         const data = await getColumnLineage('DATASET' as any, namespace, name, depth)
-        // Map API graph to internal editable nodes/edges
-        // Create dataset containers and column nodes
+        setColumnLineageApiData(data)
+        
+        // Map API graph to internal editable nodes/edges using the same logic as the original view
         const seenDatasets = new Set<string>()
         for (const node of data?.graph || []) {
           const dsId = `dataset:${node.data.namespace}:${node.data.dataset}`
@@ -126,21 +129,42 @@ const ColumnLineageEdit: React.FC = () => {
   }, [saveColumnLineage, columnLineageData, nodePositions])
 
   const graph = useMemo(() => {
+    // If we have API data, use the same mapping as the original view for consistency
+    if (columnLineageApiData && columnLineageApiData.graph && columnLineageApiData.graph.length > 0) {
+      try {
+        const { nodes, edges } = createColumnLevelElements(columnLineageApiData, undefined, handleNodeClick)
+        return { nodes, edges }
+      } catch (error) {
+        console.error('Error mapping column lineage data:', error)
+        // Fallback to internal data format
+        const { nodes, edges } = toColumnReactFlowFormat(() => {})
+        return { nodes, edges }
+      }
+    }
+    
+    // Fallback to internal data format
     const { nodes, edges } = toColumnReactFlowFormat(() => {})
     return { nodes, edges }
-  }, [toColumnReactFlowFormat, columnLineageData])
+  }, [columnLineageApiData, toColumnReactFlowFormat, columnLineageData, handleNodeClick])
 
   const canSave = useMemo(() => {
     return columnLineageData.edges.size > 0 && !isSaving
   }, [columnLineageData.edges.size, isSaving])
 
-  // Simple stats for the action bar
+  // Simple stats for the action bar - use graph data for display but internal data for save validation
   const totalDatasets = useMemo(() => {
+    if (graph && graph.nodes) {
+      return graph.nodes.filter(n => n.type === 'dataset-container').length
+    }
     return Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'dataset-container').length
-  }, [columnLineageData.nodes])
+  }, [graph, columnLineageData.nodes])
+  
   const totalColumns = useMemo(() => {
+    if (graph && graph.nodes) {
+      return graph.nodes.filter(n => n.type === 'column-field').length
+    }
     return Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field').length
-  }, [columnLineageData.nodes])
+  }, [graph, columnLineageData.nodes])
 
   return (
     <Box sx={{ position: 'relative', height: '100vh' }}>
@@ -242,7 +266,7 @@ const ColumnLineageEdit: React.FC = () => {
               const SPACING = 24
               const FIELD_HEIGHT = 50
               let newIndex = existingFieldNodes.length
-              requestedFields.forEach((f, index) => {
+              requestedFields.forEach((f) => {
                 const key = sanitize(f.name)
                 const existing = existingByName.get(key)
                 if (existing) {

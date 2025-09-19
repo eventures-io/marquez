@@ -4,29 +4,30 @@ import { Node, Edge } from '@xyflow/react';
 
 const elk = new ELK();
 
-// ELK layout options for column view (based on original Marquez implementation)
+// ELK layout options for column view (optimized for clarity like original Marquez)
 const layoutOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.separateConnectedComponents': 'false',
   'elk.layered.nodePlacement.strategy': 'STRETCH_WIDTH',
-  'elk.layered.layering.strategy': 'COFFMAN_GRAHAM',
+  'elk.layered.layering.strategy': 'NETWORK_SIMPLEX', // Better layer assignment
   'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-  'elk.layered.nodePlacement.bk.edgeStraightening': 'NONE',
-  'elk.layered.edgeRouting.splines.mode': 'SLOPPY',
-  'elk.layered.cycleBreaking.strategy': 'INTERACTIVE',
+  'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
+  'elk.layered.edgeRouting.splines.mode': 'ORTHOGONAL', // Cleaner edge routing
+  'elk.layered.cycleBreaking.strategy': 'GREEDY',
   'elk.layered.portAlignment.default': 'CENTER',
-  'elk.layered.nodeSize.options': 'SPACE_EFFICIENT_PORT_LABELS',
+  'elk.layered.nodeSize.options': 'DEFAULT_MINIMUM_SIZE',
   'elk.layered.mergeEdges': 'false',
   'elk.layered.contentAlignment': 'V_CENTER',
   'elk.layered.crossingMinimization.semiInteractive': 'false',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
   'elk.nodeLabels.placement': '[H_CENTER, V_TOP, INSIDE]',
-  'elk.spacing.nodeNode': '100', // Significantly increased horizontal spacing
-  'elk.spacing.edgeNode': '40', // More space between edges and nodes
-  'elk.spacing.edgeEdge': '20', // More space between edges
-  'elk.layered.spacing.nodeNodeBetweenLayers': '100', // Force consistent spacing between layers
-  'elk.padding': '[top=30,left=30,bottom=30,right=30]',
+  'elk.spacing.nodeNode': '150', // Increased horizontal spacing for clarity
+  'elk.spacing.edgeNode': '60', // More space between edges and nodes
+  'elk.spacing.edgeEdge': '30', // More space between edges
+  'elk.layered.spacing.nodeNodeBetweenLayers': '150', // Consistent spacing between layers
+  'elk.layered.spacing.edgeNodeBetweenLayers': '60', // Space between edges and nodes in different layers
+  'elk.padding': '[top=50,left=50,bottom=50,right=50]', // More padding for better visual clarity
 };
 
 const useColumnELKLayout = () => {
@@ -61,7 +62,7 @@ const useColumnELKLayout = () => {
           height: columnHeight,
         })),
         layoutOptions: {
-          'elk.padding': '[top=40,left=20,bottom=20,right=20]',
+          'elk.padding': '[top=60,left=30,bottom=30,right=30]', // More padding for clarity
         }
       };
     });
@@ -106,7 +107,7 @@ const useColumnELKLayout = () => {
             if (elkColumn) {
               // Instead of using ELK's child positioning (which can overflow),
               // position children manually within container bounds with proper spacing
-              const childX = (elkDataset.x || 0) + 20; // Left padding
+              const childX = (elkDataset.x || 0) + 30; // Left padding to match container
               const childY = (elkDataset.y || 0) + headerHeight + (index * (columnHeight + columnSpacing));
               
               layoutedNodes.push({
