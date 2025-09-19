@@ -39,8 +39,8 @@ const useColumnELKLayout = () => {
     // Layout constants
     const columnHeight = 50; // Height per column field
     const columnSpacing = 24; // Vertical spacing between column fields (match create/edit)
-    const headerHeight = 60; // Space for dataset header
-    const bottomPadding = 20; // Bottom padding for container
+    const headerHeight = 80; // Space for dataset header (includes title and top padding)
+    const bottomPadding = 40; // Bottom padding for container (increased for more space)
     
     // Build hierarchical ELK structure like the original implementation
     const elkDatasetNodes = datasetNodes.map(datasetNode => {
@@ -49,8 +49,10 @@ const useColumnELKLayout = () => {
         col.data?.parentDatasetId === datasetNode.id
       );
       
-      // Calculate dataset height dynamically based on child columns with spacing and bottom padding
-      const calculatedHeight = Math.max(120, headerHeight + childColumns.length * (columnHeight + columnSpacing) + bottomPadding);
+      // Calculate dataset height dynamically to match original mapping
+      // Original uses: Math.max(120, 60 + group.columns.length * 60 + 40)
+      // We need to account for our increased padding while maintaining proper spacing
+      const calculatedHeight = Math.max(150, 60 + childColumns.length * 74 + 40); // 74px = 50px column + 24px spacing
       
       return {
         id: datasetNode.id,
@@ -88,19 +90,25 @@ const useColumnELKLayout = () => {
       datasetNodes.forEach(datasetNode => {
         const elkDataset = layoutedGraph.children?.find((n) => n.id === datasetNode.id);
         if (elkDataset) {
-          // Add positioned dataset node
+          // Add positioned dataset node with proper height calculation
+          const childColumns = columnNodes.filter(col => 
+            col.data?.parentDatasetId === datasetNode.id
+          );
+          const calculatedHeight = Math.max(150, 60 + childColumns.length * 74 + 40);
+          
           layoutedNodes.push({
             ...datasetNode,
             position: {
               x: elkDataset.x || 0,
               y: elkDataset.y || 0,
             },
+            style: {
+              ...datasetNode.style,
+              height: calculatedHeight, // Ensure the React Flow node has the correct height
+            },
           });
           
           // Add positioned column nodes as children
-          const childColumns = columnNodes.filter(col => 
-            col.data?.parentDatasetId === datasetNode.id
-          );
           
           childColumns.forEach((columnNode, index) => {
             const elkColumn = elkDataset.children?.find(child => child.id === columnNode.id);
