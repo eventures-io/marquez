@@ -358,35 +358,7 @@ export class LineageService {
         }
       }));
 
-      // Build output with schema + columnLineage facet
-      // Ensure target field order follows UI stacking (via sorted child columns)
-      let orderedTargetFields: string[] = [];
-      {
-        const childCols = columnNodes.filter(c => (c.data as any)?.parentDatasetId === tgtDatasetId);
-        if (nodePositions && childCols.length > 1) {
-          orderedTargetFields = childCols
-            .slice()
-            .sort((a, b) => (nodePositions.get(a.id)?.y ?? 0) - (nodePositions.get(b.id)?.y ?? 0))
-            .map(c => (c.data as any)?.fieldName || '')
-            .filter(Boolean);
-        } else {
-          orderedTargetFields = Object.keys(fieldsMap);
-        }
-      }
-      // Rebuild fields map preserving the intended order
-      const orderedFieldsMap: Record<string, { inputFields: { namespace: string; name: string; field: string }[] }> = {};
-      orderedTargetFields.forEach((fname) => {
-        if (fieldsMap[fname]) {
-          orderedFieldsMap[fname] = fieldsMap[fname];
-        }
-      });
-      // Include any remaining fields not in ordered list
-      Object.keys(fieldsMap).forEach((fname) => {
-        if (!orderedFieldsMap[fname]) {
-          orderedFieldsMap[fname] = fieldsMap[fname];
-        }
-      });
-
+      // Build output with schema + columnLineage facet (no reordering at this layer)
       const outputs = [{
         namespace: tgtDataset.namespace,
         name: tgtDataset.name,
@@ -406,7 +378,7 @@ export class LineageService {
           columnLineage: {
             _producer: 'https://github.com/MarquezProject/marquez-ui',
             _schemaURL: 'https://openlineage.io/spec/facets/1-0-1/ColumnLineageDatasetFacet.json',
-            fields: orderedFieldsMap
+            fields: fieldsMap
           } as any
         }
       }];
