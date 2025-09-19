@@ -6,6 +6,7 @@ import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
 import { getColumnLineage } from '../../../../store/requests/columnlineage'
+import { getDataset } from '../../../../store/requests/datasets'
 import { createColumnLevelElements } from '../columnLevelMapping'
 import DetailsPane from '../../components/DetailsPane'
 import DatasetForm from '../../table-view/components/DatasetForm'
@@ -18,6 +19,7 @@ const ColumnLineageEdit: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
   const [columnLineageApiData, setColumnLineageApiData] = useState<any>(null)
+  const [datasetDefinitions, setDatasetDefinitions] = useState<Map<string, any>>(new Map())
 
   const {
     columnLineageData,
@@ -41,6 +43,51 @@ const ColumnLineageEdit: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null)
 
+  // Function to reorder column lineage data based on dataset field definitions
+  const reorderColumnLineageData = useCallback((columnData: any, datasets: Map<string, any>) => {
+    if (!columnData?.graph) return columnData
+
+    const reorderedGraph = [...columnData.graph]
+    
+    // Group nodes by dataset
+    const nodesByDataset = new Map<string, any[]>()
+    reorderedGraph.forEach(node => {
+      const datasetKey = `${node.data.namespace}:${node.data.dataset}`
+      if (!nodesByDataset.has(datasetKey)) {
+        nodesByDataset.set(datasetKey, [])
+      }
+      nodesByDataset.get(datasetKey)!.push(node)
+    })
+
+    // Reorder nodes within each dataset based on dataset field definitions
+    const finalOrderedGraph: any[] = []
+    
+    nodesByDataset.forEach((nodes, datasetKey) => {
+      const dataset = datasets.get(datasetKey)
+      if (dataset?.fields) {
+        // Create field name to position mapping from dataset definition
+        const fieldPositions = new Map<string, number>()
+        dataset.fields.forEach((field: any, index: number) => {
+          fieldPositions.set(field.name, index)
+        })
+        
+        // Sort nodes by field position in dataset definition
+        nodes.sort((a, b) => {
+          const posA = fieldPositions.get(a.data.field) ?? 999
+          const posB = fieldPositions.get(b.data.field) ?? 999
+          return posA - posB
+        })
+      }
+      
+      finalOrderedGraph.push(...nodes)
+    })
+
+    return {
+      ...columnData,
+      graph: finalOrderedGraph
+    }
+  }, [])
+
   // Load existing column lineage for dataset using the same API as the original view
   useEffect(() => {
     const load = async () => {
@@ -49,11 +96,36 @@ const ColumnLineageEdit: React.FC = () => {
       setError(null)
       try {
         const data = await getColumnLineage('DATASET' as any, namespace, name, depth)
-        setColumnLineageApiData(data)
+        
+        // Get unique datasets from the column lineage response
+        const uniqueDatasets = new Set<string>()
+        data?.graph?.forEach((node: any) => {
+          uniqueDatasets.add(`${node.data.namespace}:${node.data.dataset}`)
+        })
+        
+        // Fetch dataset definitions to get natural field order
+        const datasetDefs = new Map<string, any>()
+        await Promise.all(
+          Array.from(uniqueDatasets).map(async (datasetKey) => {
+            const [dsNamespace, dsName] = datasetKey.split(':')
+            try {
+              const dataset = await getDataset(dsNamespace, dsName)
+              datasetDefs.set(datasetKey, dataset)
+            } catch (e) {
+              console.warn(`Failed to fetch dataset ${datasetKey}:`, e)
+            }
+          })
+        )
+        
+        setDatasetDefinitions(datasetDefs)
+        
+        // Reorder column lineage data based on dataset field definitions
+        const reorderedData = reorderColumnLineageData(data, datasetDefs)
+        setColumnLineageApiData(reorderedData)
         
         // Map API graph to internal editable nodes/edges using the same logic as the original view
         const seenDatasets = new Set<string>()
-        for (const node of data?.graph || []) {
+        for (const node of reorderedData?.graph || []) {
           const dsId = `dataset:${node.data.namespace}:${node.data.dataset}`
           if (!seenDatasets.has(dsId)) {
             updateColumnNode(dsId, {
@@ -87,7 +159,7 @@ const ColumnLineageEdit: React.FC = () => {
         }
 
         // Edges
-        for (const node of data?.graph || []) {
+        for (const node of reorderedData?.graph || []) {
           for (const e of node.outEdges || []) {
             const edgeId = `${e.origin}-${e.destination}`
             addColumnEdge(edgeId, e.origin, e.destination)
@@ -102,7 +174,7 @@ const ColumnLineageEdit: React.FC = () => {
       }
     }
     load()
-  }, [namespace, name, depth, updateColumnNode, updateColumnNodePosition, addColumnEdge])
+  }, [namespace, name, depth, updateColumnNode, updateColumnNodePosition, addColumnEdge, reorderColumnLineageData])
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     // If a column is clicked, edit its parent dataset
