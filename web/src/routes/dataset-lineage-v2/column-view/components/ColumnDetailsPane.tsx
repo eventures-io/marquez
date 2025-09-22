@@ -29,6 +29,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
   backgroundColor: theme.palette.grey[50],
 }));
 
+// TODO: Remove if no longer used; 
 const ColumnDetailsPane: React.FC<ColumnDetailsPaneProps> = ({ columnData }) => {
   if (!columnData) {
     return (

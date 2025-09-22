@@ -4,6 +4,8 @@ import { LineageMode, NodeType } from '@app-types';
 import { getColumnLineage } from '../../../store/requests/columnlineage';
 import { createColumnLevelElements } from './columnLevelMapping';
 import ColumnLevelFlow from './ColumnLevelFlow';
+import useColumnDrawerState from './useColumnDrawerState';
+import DatasetDetailsPane from '../table-view/components/DatasetDetailsPane';
 
 const DatasetColumnLineageView: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>();
@@ -16,6 +18,35 @@ const DatasetColumnLineageView: React.FC = () => {
   
   // Get selected column from URL params
   const selectedColumn = searchParams.get('column');
+
+  const {
+    isDrawerOpen,
+    selectedNodeId,
+    selectedNodeData,
+    drawerRef,
+    handleNodeClick: drawerHandleNodeClick,
+    handlePaneClick,
+  } = useColumnDrawerState();
+
+  const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
+    const namespace = nodeData?.namespace || nodeData?.dataset?.namespace;
+    const name = nodeData?.datasetName || nodeData?.dataset?.name || nodeData?.name;
+    const fieldName = nodeData?.fieldName;
+
+    if (!namespace || !name) {
+      return;
+    }
+
+    const datasetId = `dataset:${namespace}:${name}`;
+    drawerHandleNodeClick(datasetId, {
+      type: NodeType.DATASET,
+      dataset: {
+        namespace,
+        name,
+      },
+      fieldName,
+    });
+  }, [drawerHandleNodeClick]);
 
   // Fetch column lineage data
   const fetchColumnLineageData = useCallback(async () => {
@@ -68,6 +99,19 @@ const DatasetColumnLineageView: React.FC = () => {
     };
   }, [columnLineageGraph]);
 
+  const drawerContent = React.useMemo(() => {
+    if (!selectedNodeId || !selectedNodeData) {
+      return null;
+    }
+
+    return (
+      <DatasetDetailsPane
+        selectedNodeData={selectedNodeData}
+        selectedNodeId={selectedNodeId}
+      />
+    );
+  }, [selectedNodeData, selectedNodeId]);
+
   return (
     <ColumnLevelFlow 
       mode={LineageMode.VIEW}
@@ -75,11 +119,19 @@ const DatasetColumnLineageView: React.FC = () => {
       nodeType={NodeType.DATASET}
       depth={depth}
       setDepth={setDepth}
+      onNodeClick={handleNodeClick}
       loading={loading}
       error={error}
       totalDatasets={stats.totalDatasets}
       totalColumns={stats.totalColumns}
       selectedColumn={selectedColumn || undefined}
+      isDrawerOpen={isDrawerOpen}
+      selectedNodeId={selectedNodeId}
+      selectedNodeData={selectedNodeData}
+      drawerRef={drawerRef}
+      handlePaneClick={handlePaneClick}
+      initialSelectionId={selectedColumn || undefined}
+      drawerContent={drawerContent}
     />
   );
 };
