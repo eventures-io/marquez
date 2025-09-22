@@ -8,4 +8,4 @@ This project is extending the Marquez front-end with added functionality. For th
 
 ## Development Notes
 
-**IMPORTANT**: Don't ask to run the server. Consider it to be already running.
+**IMPORTANT**: Don't ask to run the server. Consider it to be already running on port 1337. 

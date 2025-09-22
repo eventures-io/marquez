@@ -7,6 +7,7 @@ import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
 import DetailsPane from '../../components/DetailsPane'
 import DatasetForm from '../../table-view/components/DatasetForm'
+import useColumnDrawerState from '../useColumnDrawerState'
 
 let datasetId = 1
 const getDatasetId = () => `column-dataset-${datasetId++}`
@@ -31,9 +32,16 @@ const ColumnLineageCreate: React.FC = () => {
     setHasUnsavedChanges,
   } = useSaveColumnLineage()
 
-  const [isDrawerOpen, setIsDrawerOpen] = useState(true) // Start with drawer open
+  const {
+    isDrawerOpen,
+    selectedNodeId: selectedDatasetId,
+    drawerRef,
+    handleNodeClick: drawerHandleNodeClick,
+    handlePaneClick,
+  } = useColumnDrawerState()
+
   const [showFloatingButton, setShowFloatingButton] = useState(false)
-  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(null)
+
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     console.log('handleNodeClick called:', { 
@@ -46,20 +54,18 @@ const ColumnLineageCreate: React.FC = () => {
     if (nodeId.startsWith('column-dataset-') && !nodeId.includes('-field-')) {
       // Click on dataset container - edit this dataset
       console.log('Clicking dataset container, setting selectedDatasetId:', nodeId)
-      setSelectedDatasetId(nodeId)
-      setIsDrawerOpen(true)
+      drawerHandleNodeClick(nodeId, nodeData)
     } else if (nodeId.includes('-field-')) {
       // Click on column field - edit the parent dataset
       const parentDatasetId = nodeData.parentDatasetId
       console.log('Clicking column field, parent dataset:', parentDatasetId)
       if (parentDatasetId) {
-        setSelectedDatasetId(parentDatasetId)
-        setIsDrawerOpen(true)
+        drawerHandleNodeClick(parentDatasetId, nodeData)
       }
     } else {
       console.log('Unknown node type for nodeId:', nodeId)
     }
-  }, [])
+  }, [drawerHandleNodeClick])
 
   const columnLineageGraph = React.useMemo(() => {
     const { nodes, edges } = toColumnReactFlowFormat(handleNodeClick)
@@ -242,22 +248,30 @@ const ColumnLineageCreate: React.FC = () => {
     }
     
     // Close drawer and clear selection
-    setIsDrawerOpen(false)
-    setSelectedDatasetId(null)
+    handlePaneClick()
   }, [selectedDatasetId, columnLineageData.nodes, createColumnDatasetWithFields, updateColumnNode, deleteColumnNode, updateColumnNodePosition])
 
   const handleFloatingButtonClick = useCallback(() => {
-    setSelectedDatasetId(null) // Clear selection for creating new dataset
-    setIsDrawerOpen(true)
-  }, [])
+    drawerHandleNodeClick('', {}) // Clear selection for creating new dataset
+  }, [drawerHandleNodeClick])
 
   const handleDrawerClose = useCallback(() => {
+    console.log('ColumnLineageCreate: handleDrawerClose invoked')
     // Only allow closing if we have at least one dataset
     if (columnLineageData.nodes.size > 0) {
-      setIsDrawerOpen(false)
-      setSelectedDatasetId(null) // Clear selection on close
+      handlePaneClick()
+    } else {
+      console.log('ColumnLineageCreate: Cannot close drawer - no datasets created yet')
     }
-  }, [columnLineageData.nodes.size])
+  }, [columnLineageData.nodes.size, handlePaneClick])
+
+  // Business logic override for create mode: don't allow closing if no datasets exist
+  useEffect(() => {
+    if (!isDrawerOpen && columnLineageData.nodes.size === 0) {
+      // Force drawer to stay open if no datasets created yet
+      drawerHandleNodeClick('', {})
+    }
+  }, [isDrawerOpen, columnLineageData.nodes.size, drawerHandleNodeClick])
 
   const getSelectedDatasetData = useCallback(() => {
     if (!selectedDatasetId) {
@@ -401,10 +415,16 @@ const ColumnLineageCreate: React.FC = () => {
         error={null}
         totalDatasets={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'dataset-container').length}
         totalColumns={Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field').length}
+        isDrawerOpen={isDrawerOpen}
+        selectedNodeId={selectedDatasetId}
+        selectedNodeData={undefined}
+        drawerRef={drawerRef}
+        handlePaneClick={handlePaneClick}
       />
 
       {/* Dataset Form Drawer */}
       <DetailsPane 
+        ref={drawerRef}
         open={isDrawerOpen} 
         onClose={handleDrawerClose}
       >

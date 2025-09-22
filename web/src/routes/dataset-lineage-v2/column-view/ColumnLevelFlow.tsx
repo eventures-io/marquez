@@ -16,7 +16,6 @@ import ColumnFieldNode from './ColumnFieldNode';
 import ColumnLevelActionBar from './ColumnLevelActionBar';
 import DetailsPane from '../components/DetailsPane';
 import ColumnDetailsPane from './components/ColumnDetailsPane';
-import useColumnDrawerState from './useColumnDrawerState';
 import useColumnELKLayout from './useColumnELKLayout';
 import useColumnLayout from './useColumnLayout';
 import Toolbar from '../table-view/components/Toolbar';
@@ -48,10 +47,17 @@ interface ColumnLevelFlowProps {
   initialSelectionId?: string;
   isSaving?: boolean;
   hasUnsavedChanges?: boolean;
+  // Drawer state props
+  isDrawerOpen?: boolean;
+  selectedNodeId?: string | null;
+  selectedNodeData?: any;
+  drawerRef?: React.RefObject<HTMLDivElement>;
+  handlePaneClick?: () => void;
   canSaveLineage?: boolean;
   totalDatasets?: number;
   totalColumns?: number;
   selectedColumn?: string;
+  drawerContent?: React.ReactNode;
 }
 
 const HEADER_HEIGHT = 64 + 1;
@@ -80,8 +86,20 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   totalDatasets = 0,
   totalColumns = 0,
   selectedColumn,
+  // Drawer state props
+  isDrawerOpen,
+  selectedNodeId,
+  selectedNodeData,
+  drawerRef,
+  handlePaneClick,
+  drawerContent,
 }) => {
-  const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useColumnDrawerState();
+  // Use drawer props or provide defaults for backward compatibility
+  const drawerOpen = isDrawerOpen ?? false;
+  const drawerSelectedNodeId = selectedNodeId ?? null;
+  const drawerSelectedNodeData = selectedNodeData ?? null;
+  const drawerRefProp = drawerRef ?? { current: null };
+  const drawerHandlePaneClick = handlePaneClick ?? (() => {});
   const { getLayoutedElements } = useColumnELKLayout();
   const didAutoOpenRef = useRef(false);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
@@ -107,8 +125,8 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   // Enhanced pane click handler to clear edge selection
   const handleEnhancedPaneClick = useCallback(() => {
     setSelectedEdgeId(null);
-    handlePaneClick();
-  }, [handlePaneClick]);
+    drawerHandlePaneClick();
+  }, [drawerHandlePaneClick]);
 
   // Allow column-to-column connections in CREATE and EDIT modes
   // (Definitions moved below layout to avoid TS ordering issues)
@@ -136,18 +154,18 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   // Compose graph with click handlers
   const graphWithHandlers = React.useMemo(() => {
     if (!columnLineageGraph) return null;
-    const nodeClickHandler = onNodeClick || handleNodeClick;
+    const nodeClickHandler = onNodeClick;
     const nodes = columnLineageGraph.nodes.map(n => ({
       ...n,
       data: { ...n.data, onNodeClick: nodeClickHandler },
     }));
     return { nodes, edges: columnLineageGraph.edges };
-  }, [columnLineageGraph, onNodeClick, handleNodeClick]);
+  }, [columnLineageGraph, onNodeClick]);
 
   // Layout handling similar to table-level: ELK once then lock for EDIT, always for VIEW
   const layout = useColumnLayout({
     columnGraph: mode === LineageMode.CREATE ? null : graphWithHandlers,
-    onNodeClick: onNodeClick || handleNodeClick,
+    onNodeClick: onNodeClick || (() => {}),
     lockELKLayout: mode === LineageMode.EDIT,
   });
 
@@ -181,14 +199,14 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
       setEdges([]);
       return;
     }
-    const nodeClickHandler = onNodeClick || handleNodeClick;
+    const nodeClickHandler = onNodeClick;
     const nodesWithHandlers = columnLineageGraph.nodes.map((n) => ({
       ...n,
       data: { ...n.data, onNodeClick: nodeClickHandler },
     }));
     setNodes(nodesWithHandlers as any);
     setEdges(columnLineageGraph.edges as any);
-  }, [mode, columnLineageGraph, setNodes, setEdges, onNodeClick, handleNodeClick]);
+  }, [mode, columnLineageGraph, setNodes, setEdges, onNodeClick]);
 
   // Global keydown event listener for edge deletion
   useEffect(() => {
@@ -204,14 +222,14 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   // Open drawer initially if requested (only once)
   useEffect(() => {
-    if (!didAutoOpenRef.current && initialSelectionId && columnLineageGraph) {
+    if (!didAutoOpenRef.current && initialSelectionId && columnLineageGraph && onNodeClick) {
       const node = columnLineageGraph.nodes.find((n) => n.id === initialSelectionId);
       if (node) {
-        handleNodeClick(initialSelectionId, node.data);
+        onNodeClick(initialSelectionId, node.data);
         didAutoOpenRef.current = true;
       }
     }
-  }, [initialSelectionId, columnLineageGraph, handleNodeClick]);
+  }, [initialSelectionId, columnLineageGraph, onNodeClick]);
 
   if (loading) {
     return (
@@ -252,18 +270,18 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         sx={{ overflow: 'hidden', backgroundColor: 'white', position: 'relative' }}
       >
         <DetailsPane 
-          ref={drawerRef} 
-          open={isDrawerOpen} 
-          onClose={handlePaneClick}
-          showDelete={mode !== LineageMode.VIEW && !!selectedNodeId}
+          ref={drawerRefProp} 
+          open={drawerOpen} 
+          onClose={drawerHandlePaneClick}
+          showDelete={mode !== LineageMode.VIEW && !!drawerSelectedNodeId}
           onDelete={() => {
-            if (selectedNodeId && onDelete) {
-              onDelete(selectedNodeId);
-              handlePaneClick(); 
+            if (drawerSelectedNodeId && onDelete) {
+              onDelete(drawerSelectedNodeId);
+              drawerHandlePaneClick(); 
             }
           }}
         >
-          <ColumnDetailsPane columnData={selectedNodeData} />
+          {drawerContent || <ColumnDetailsPane columnData={drawerSelectedNodeData} />}
         </DetailsPane>
 
         <ReactFlow
