@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box, Typography } from '@mui/material'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { LineageMode, NodeType } from '@app-types'
 import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
@@ -10,15 +10,12 @@ import { getDataset } from '../../../../store/requests/datasets'
 import DetailsPane from '../../components/DetailsPane'
 import DatasetForm from '../../table-view/components/DatasetForm'
 
+const DEFAULT_LINEAGE_DEPTH = 2
+
 const ColumnLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
-  const [searchParams] = useSearchParams()
-
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [depth, setDepth] = useState(Number(searchParams.get('depth')) || 2)
-  const [columnLineageApiData, setColumnLineageApiData] = useState<any>(null)
-  const [datasetDefinitions, setDatasetDefinitions] = useState<Map<string, any>>(new Map())
 
   const {
     columnLineageData,
@@ -94,7 +91,7 @@ const ColumnLineageEdit: React.FC = () => {
       setLoading(true)
       setError(null)
       try {
-        const data = await getColumnLineage('DATASET' as any, namespace, name, depth)
+        const data = await getColumnLineage('DATASET' as any, namespace, name, DEFAULT_LINEAGE_DEPTH)
         
         // Get unique datasets from the column lineage response
         const uniqueDatasets = new Set<string>()
@@ -116,11 +113,8 @@ const ColumnLineageEdit: React.FC = () => {
           })
         )
         
-        setDatasetDefinitions(datasetDefs)
-        
         // Reorder column lineage data based on dataset field definitions
         const reorderedData = reorderColumnLineageData(data, datasetDefs)
-        setColumnLineageApiData(reorderedData)
         
         // Map API graph to internal editable nodes/edges using the same logic as the original view
         const seenDatasets = new Set<string>()
@@ -173,7 +167,7 @@ const ColumnLineageEdit: React.FC = () => {
       }
     }
     load()
-  }, [namespace, name, depth, updateColumnNode, updateColumnNodePosition, addColumnEdge, reorderColumnLineageData])
+  }, [namespace, name, updateColumnNode, updateColumnNodePosition, addColumnEdge, reorderColumnLineageData])
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     // If a column is clicked, edit its parent dataset
@@ -381,8 +375,6 @@ const ColumnLineageEdit: React.FC = () => {
         mode={LineageMode.EDIT}
         columnLineageGraph={graph}
         nodeType={NodeType.DATASET}
-        depth={depth}
-        setDepth={setDepth}
         onNodePositionChange={updateColumnNodePosition}
         onNodeClick={handleNodeClick}
         onEdgeCreate={handleEdgeCreate}

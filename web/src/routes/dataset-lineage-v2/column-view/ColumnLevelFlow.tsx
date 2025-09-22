@@ -32,8 +32,8 @@ interface ColumnLevelFlowProps {
   mode: LineageMode;
   columnLineageGraph: { nodes: any[], edges: any[] } | null;
   nodeType: NodeType;
-  depth: number;
-  setDepth: (depth: number) => void;
+  depth?: number;
+  setDepth?: (depth: number) => void;
   onUpdate?: (nodeId: string, data: any) => void;
   onSave?: () => void;
   onDelete?: (nodeId: string) => void;
@@ -231,7 +231,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   return (
     <>
-      {mode !== LineageMode.CREATE && (
+      {mode === LineageMode.VIEW && depth !== undefined && setDepth && (
         <ColumnLevelActionBar
           nodeType={nodeType}
           depth={depth}
