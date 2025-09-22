@@ -18,31 +18,47 @@ const ViewSelector: React.FC<ViewSelectorProps> = ({
   const { namespace, name } = useParams<{ namespace: string; name: string }>();
   const location = useLocation();
 
-  const [columnViewEnabled, setColumnViewEnabled] = React.useState<boolean>(true);
+  const [columnViewEnabled, setColumnViewEnabled] = React.useState<boolean | null>(null);
 
-  React.useEffect(() => {
-    let cancelled = false;
-    const checkColumnLineage = async () => {
-      if (!namespace || !name) {
-        setColumnViewEnabled(false);
-        return;
-      }
-      try {
-        const res = await getColumnLineage('DATASET' as any, namespace, name, 1);
-        const hasGraph = Array.isArray(res?.graph) && res.graph.length > 0;
-        if (!cancelled) setColumnViewEnabled(hasGraph);
-      } catch (e) {
-        if (!cancelled) setColumnViewEnabled(false);
-      }
-    };
-    checkColumnLineage();
-    return () => { cancelled = true; };
+  const checkColumnViewAvailability = React.useCallback(async () => {
+    if (!namespace || !name) {
+      setColumnViewEnabled(false);
+      return false;
+    }
+
+    try {
+      const res = await getColumnLineage('DATASET' as any, namespace, name, 1);
+      const hasGraph = Array.isArray(res?.graph) && res.graph.length > 0;
+      setColumnViewEnabled(hasGraph);
+      return hasGraph;
+    } catch (e) {
+      setColumnViewEnabled(false);
+      return false;
+    }
   }, [namespace, name]);
 
-  const handleChange = (event: SelectChangeEvent<ViewType>) => {
+  React.useEffect(() => {
+    if (currentView === 'column-view' && columnViewEnabled === null) {
+      setColumnViewEnabled(true);
+    }
+  }, [currentView, columnViewEnabled]);
+
+  const handleChange = async (event: SelectChangeEvent<ViewType>) => {
     const newView = event.target.value as ViewType;
-    if (newView === 'column-view' && !columnViewEnabled) return;
-    
+
+    if (newView === 'column-view') {
+      if (columnViewEnabled === false) {
+        return;
+      }
+
+      if (columnViewEnabled === null) {
+        const available = await checkColumnViewAvailability();
+        if (!available) {
+          return;
+        }
+      }
+    }
+
     if (onViewChange) {
       onViewChange(newView);
     }
@@ -51,12 +67,12 @@ const ViewSelector: React.FC<ViewSelectorProps> = ({
       // Build new path based on current location
       const basePath = `/v2/dataset/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`;
       const newPath = `${basePath}/${newView}`;
-      
+
       // Preserve query parameters
       const searchParams = new URLSearchParams(location.search);
       const queryString = searchParams.toString();
       const fullPath = queryString ? `${newPath}?${queryString}` : newPath;
-      
+
       navigate(fullPath);
     }
   };
@@ -86,7 +102,7 @@ const ViewSelector: React.FC<ViewSelectorProps> = ({
               <span>Table View</span>
             </Box>
           </MenuItem>
-          <MenuItem value="column-view" disabled={!columnViewEnabled}>
+          <MenuItem value="column-view" disabled={columnViewEnabled === false}>
             <Box display="flex" alignItems="center" gap={1}>
               <span>🔗</span>
               <span>Column View</span>
