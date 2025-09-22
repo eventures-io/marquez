@@ -285,7 +285,73 @@ const ColumnLineageEdit: React.FC = () => {
                   description: datasetData.dataset.description,
                 },
               })
-              // Handle field updates similar to before...
+
+              // Merge column fields (preserve existing, add new, remove deleted)
+              const sanitize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_')
+              const existingFieldNodes = Array.from(columnLineageData.nodes.values())
+                .filter(n => n.type === 'column-field' && (n.data as any)?.parentDatasetId === selectedDatasetId)
+              const existingByName = new Map<string, { id: string; node: any }>()
+              existingFieldNodes.forEach(n => {
+                const name = ((n.data as any)?.fieldName || '') as string
+                existingByName.set(sanitize(name), { id: n.id, node: n })
+              })
+
+              const requestedFields: Array<{ name: string; type: string }> = (datasetData.dataset.fields || []).map((f: any) => ({ name: f.name, type: f.type || 'string' }))
+              const requestedByName = new Map<string, { name: string; type: string }>()
+              requestedFields.forEach(f => requestedByName.set(sanitize(f.name), f))
+
+              // Remove fields that are no longer present
+              existingFieldNodes.forEach(n => {
+                const key = sanitize(((n.data as any)?.fieldName) || '')
+                if (!requestedByName.has(key)) {
+                  deleteColumnNode(n.id)
+                }
+              })
+
+              // Add or update requested fields and position them correctly
+              const SPACING = 24
+              const FIELD_HEIGHT = 50
+              requestedFields.forEach((f, index) => {
+                const key = sanitize(f.name)
+                const existing = existingByName.get(key)
+                const fieldPosition = { x: 20, y: 60 + index * (FIELD_HEIGHT + SPACING) }
+                
+                if (existing) {
+                  // Update existing field node data
+                  updateColumnNode(existing.id, {
+                    id: existing.id,
+                    type: 'column-field',
+                    data: {
+                      id: existing.id,
+                      namespace: datasetData.dataset.namespace,
+                      datasetName: datasetData.dataset.name,
+                      fieldName: f.name,
+                      dataType: f.type,
+                      parentDatasetId: selectedDatasetId,
+                    },
+                  })
+                  // Update position for correct ordering
+                  updateColumnNodePosition(existing.id, fieldPosition)
+                } else {
+                  // Create a stable id per field name
+                  const fieldId = `${selectedDatasetId}-field-${key}`
+                  updateColumnNode(fieldId, {
+                    id: fieldId,
+                    type: 'column-field',
+                    data: {
+                      id: fieldId,
+                      namespace: datasetData.dataset.namespace,
+                      datasetName: datasetData.dataset.name,
+                      fieldName: f.name,
+                      dataType: f.type,
+                      parentDatasetId: selectedDatasetId,
+                    },
+                  })
+                  // Position new field in correct order
+                  updateColumnNodePosition(fieldId, fieldPosition)
+                }
+              })
+
               setHasUnsavedChanges(true)
               handlePaneClick()
             }}
