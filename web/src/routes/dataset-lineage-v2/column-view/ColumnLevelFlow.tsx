@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import {
   ReactFlow,
@@ -84,9 +84,31 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   const { isDrawerOpen, selectedNodeId, selectedNodeData, drawerRef, handleNodeClick, handlePaneClick } = useColumnDrawerState();
   const { getLayoutedElements } = useColumnELKLayout();
   const didAutoOpenRef = useRef(false);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Edge click handler for selection
+  const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelectedEdgeId(edge.id);
+  }, []);
+
+  // Key down handler for edge deletion
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      if (selectedEdgeId && onEdgeDelete) {
+        onEdgeDelete(selectedEdgeId);
+        setSelectedEdgeId(null);
+      }
+    }
+  }, [selectedEdgeId, onEdgeDelete]);
+
+  // Enhanced pane click handler to clear edge selection
+  const handleEnhancedPaneClick = useCallback(() => {
+    setSelectedEdgeId(null);
+    handlePaneClick();
+  }, [handlePaneClick]);
 
   // Allow column-to-column connections in CREATE and EDIT modes
   // (Definitions moved below layout to avoid TS ordering issues)
@@ -110,6 +132,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     });
   }, [onNodesChange, onNodePositionChange, mode]);
 
+
   // Compose graph with click handlers
   const graphWithHandlers = React.useMemo(() => {
     if (!columnLineageGraph) return null;
@@ -127,6 +150,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     onNodeClick: onNodeClick || handleNodeClick,
     lockELKLayout: mode === LineageMode.EDIT,
   });
+
 
   // Define connection guards/handlers now that layout is available
   const getCurrentNodes = () => (mode === LineageMode.CREATE ? nodes : (layout.nodes || []));
@@ -165,6 +189,18 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     setNodes(nodesWithHandlers as any);
     setEdges(columnLineageGraph.edges as any);
   }, [mode, columnLineageGraph, setNodes, setEdges, onNodeClick, handleNodeClick]);
+
+  // Global keydown event listener for edge deletion
+  useEffect(() => {
+    const handleGlobalKeyDown = (event: KeyboardEvent) => {
+      handleKeyDown(event);
+    };
+
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleGlobalKeyDown);
+    };
+  }, [handleKeyDown]);
 
   // Open drawer initially if requested (only once)
   useEffect(() => {
@@ -232,13 +268,23 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
         <ReactFlow
           nodes={mode === LineageMode.CREATE ? nodes : layout.nodes}
-          edges={mode === LineageMode.CREATE ? edges : layout.edges}
+          edges={(mode === LineageMode.CREATE ? edges : layout.edges).map(edge => ({
+            ...edge,
+            style: {
+              ...edge.style,
+              ...(selectedEdgeId === edge.id && {
+                filter: 'drop-shadow(0px 0px 2px rgba(128, 128, 128, 0.5))',
+                strokeWidth: 2,
+              }),
+            },
+          }))}
           onNodesChange={mode === LineageMode.CREATE ? handleNodesChange : layout.onNodesChange}
           onEdgesChange={mode === LineageMode.CREATE ? onEdgesChange : layout.onEdgesChange}
           onConnect={(c) => handleConnectRef.current && handleConnectRef.current(c)}
           onEdgesDelete={handleEdgesDelete}
+          onEdgeClick={handleEdgeClick}
           isValidConnection={(c) => (isValidConnectionRef.current ? isValidConnectionRef.current(c) : false)}
-          onPaneClick={handlePaneClick}
+          onPaneClick={handleEnhancedPaneClick}
           nodeTypes={nodeTypes}
           fitView={mode !== LineageMode.CREATE}
           fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}

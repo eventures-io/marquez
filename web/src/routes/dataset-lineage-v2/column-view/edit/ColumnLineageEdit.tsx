@@ -7,7 +7,6 @@ import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
 import { getColumnLineage } from '../../../../store/requests/columnlineage'
 import { getDataset } from '../../../../store/requests/datasets'
-import { createColumnLevelElements } from '../columnLevelMapping'
 import DetailsPane from '../../components/DetailsPane'
 import DatasetForm from '../../table-view/components/DatasetForm'
 
@@ -192,32 +191,22 @@ const ColumnLineageEdit: React.FC = () => {
   }, [addColumnEdge, setHasUnsavedChanges])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
+    console.log('Deleting edge:', edgeId)
     deleteColumnEdge(edgeId)
     setHasUnsavedChanges(true)
   }, [deleteColumnEdge, setHasUnsavedChanges])
 
   const handleSave = useCallback(async () => {
+    console.log('Saving lineage with edges:', Array.from(columnLineageData.edges.keys()))
+    console.log('Total edges to save:', columnLineageData.edges.size)
     await saveColumnLineage(columnLineageData, nodePositions)
   }, [saveColumnLineage, columnLineageData, nodePositions])
 
   const graph = useMemo(() => {
-    // If we have API data, use the same mapping as the original view for consistency
-    if (columnLineageApiData && columnLineageApiData.graph && columnLineageApiData.graph.length > 0) {
-      try {
-        const { nodes, edges } = createColumnLevelElements(columnLineageApiData, undefined, handleNodeClick)
-        return { nodes, edges }
-      } catch (error) {
-        console.error('Error mapping column lineage data:', error)
-        // Fallback to internal data format
-        const { nodes, edges } = toColumnReactFlowFormat(() => {})
-        return { nodes, edges }
-      }
-    }
-    
-    // Fallback to internal data format
-    const { nodes, edges } = toColumnReactFlowFormat(() => {})
+    // In edit mode, always use the internal editable data format to reflect real-time changes
+    const { nodes, edges } = toColumnReactFlowFormat(handleNodeClick)
     return { nodes, edges }
-  }, [columnLineageApiData, toColumnReactFlowFormat, columnLineageData, handleNodeClick])
+  }, [toColumnReactFlowFormat, columnLineageData, handleNodeClick])
 
   const canSave = useMemo(() => {
     return columnLineageData.edges.size > 0 && !isSaving
@@ -334,15 +323,16 @@ const ColumnLineageEdit: React.FC = () => {
                 }
               })
 
-              // Add or update requested fields
+              // Add or update requested fields and position them correctly
               const SPACING = 24
               const FIELD_HEIGHT = 50
-              let newIndex = existingFieldNodes.length
-              requestedFields.forEach((f) => {
+              requestedFields.forEach((f, index) => {
                 const key = sanitize(f.name)
                 const existing = existingByName.get(key)
+                const fieldPosition = { x: 20, y: 60 + index * (FIELD_HEIGHT + SPACING) }
+                
                 if (existing) {
-                  // Update existing field node data, keep id and position
+                  // Update existing field node data
                   updateColumnNode(existing.id, {
                     id: existing.id,
                     type: 'column-field',
@@ -355,6 +345,8 @@ const ColumnLineageEdit: React.FC = () => {
                       parentDatasetId: selectedDatasetId,
                     },
                   })
+                  // Update position for correct ordering
+                  updateColumnNodePosition(existing.id, fieldPosition)
                 } else {
                   // Create a stable id per field name
                   const fieldId = `${selectedDatasetId}-field-${key}`
@@ -370,10 +362,8 @@ const ColumnLineageEdit: React.FC = () => {
                       parentDatasetId: selectedDatasetId,
                     },
                   })
-                  // Position new field below existing ones to avoid overlap in locked layout
-                  // Align with ELK-based layout: left padding 20, header offset 60
-                  updateColumnNodePosition(fieldId, { x: 20, y: 60 + newIndex * (FIELD_HEIGHT + SPACING) })
-                  newIndex += 1
+                  // Position new field in correct order
+                  updateColumnNodePosition(fieldId, fieldPosition)
                 }
               })
               setHasUnsavedChanges(true)

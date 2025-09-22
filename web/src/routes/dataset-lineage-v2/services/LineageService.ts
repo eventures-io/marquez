@@ -251,9 +251,9 @@ export class LineageService {
 
   /**
    * Save column-level lineage by emitting OpenLineage events that attach ColumnLineage facets
-   * to output datasets. For each target dataset with mappings, we create a START and COMPLETE
-   * event. If exactly one producing job exists for that dataset, reuse its identity; otherwise
-   * emit a synthetic job name.
+   * to output datasets. This creates a complete replacement of column mappings to support deletions.
+   * For each target dataset, we create a START and COMPLETE event with the complete set of 
+   * column mappings, effectively replacing any previous mappings.
    */
   static async saveColumnLineage(columnLineageData: ColumnLineageData, nodePositions?: Map<string, { x: number; y: number }>): Promise<void> {
     // Index datasets and their fields from local column nodes
@@ -326,14 +326,32 @@ export class LineageService {
     const timestamp = new Date().toISOString();
     const events: OpenLineageEvent[] = [];
 
-    for (const [tgtDatasetId, fieldsMap] of mappingsByTarget.entries()) {
+    // Get all target datasets that need column lineage updates (whether they have mappings or not)
+    // This ensures we send complete replacement events for all datasets involved
+    const allTargetDatasetIds = new Set<string>();
+    
+    // Add datasets that currently have mappings
+    for (const tgtDatasetId of mappingsByTarget.keys()) {
+      allTargetDatasetIds.add(tgtDatasetId);
+    }
+    
+    // Add datasets that have column nodes but no current mappings (for clearing)
+    for (const columnNode of columnNodes) {
+      const parentDatasetId = (columnNode.data as any)?.parentDatasetId;
+      if (parentDatasetId && datasetsById.has(parentDatasetId)) {
+        allTargetDatasetIds.add(parentDatasetId);
+      }
+    }
+
+    for (const tgtDatasetId of allTargetDatasetIds) {
+      const fieldsMap = mappingsByTarget.get(tgtDatasetId) || {}; // Empty object if no mappings
       const tgtDataset = datasetsById.get(tgtDatasetId);
       if (!tgtDataset) continue;
 
-      // Determine job identity: reuse only if exactly one producing job exists
-      const reusedJob = await this.resolveProducingJobForDataset(tgtDataset.namespace, tgtDataset.name);
-      const jobNamespace = reusedJob?.namespace || tgtDataset.namespace || 'ui';
-      const jobName = reusedJob?.name || `ui.column_mapping::${tgtDataset.namespace}.${tgtDataset.name}`;
+      // Use a consistent job identity for column lineage to enable proper updates/replacements
+      // This ensures that each new save will update the same job, replacing previous column mappings
+      const jobNamespace = tgtDataset.namespace || 'ui';
+      const jobName = `ui.column_lineage.${tgtDataset.namespace}.${tgtDataset.name}`;
 
       // Build inputs from unique source datasets
       const sourceIds = Array.from(sourcesByTarget.get(tgtDatasetId) || []);
@@ -394,9 +412,7 @@ export class LineageService {
             documentation: {
               _producer: 'https://github.com/MarquezProject/marquez-ui',
               _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/DocumentationJobFacet.json',
-              description: reusedJob
-                ? `Column lineage update for ${tgtDataset.namespace}.${tgtDataset.name} via UI (bound to existing job).`
-                : `Column lineage update for ${tgtDataset.namespace}.${tgtDataset.name} via UI (synthetic job).`
+              description: `Column lineage for ${tgtDataset.namespace}.${tgtDataset.name} managed via UI. This job represents the complete set of column-level mappings and replaces any previous mappings.`
             }
           }
         },

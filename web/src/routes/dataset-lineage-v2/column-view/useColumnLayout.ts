@@ -75,10 +75,24 @@ const useColumnLayout = ({ columnGraph, onNodeClick, lockELKLayout = false }: Us
           const currentById = new Map(nodes.map((n) => [n.id, n] as const))
           const merged = columnGraph.nodes.map((incoming: any) => {
             const existing = currentById.get(incoming.id)
+            // In locked ELK mode, handle positioning carefully:
+            // - For dataset containers: always preserve existing ELK positions
+            // - For column fields: use incoming position only if it's meaningful (not default {x:0,y:0})
+            let position;
+            if (incoming.type === 'column-field') {
+              const hasManualPosition = incoming.position && (incoming.position.x !== 0 || incoming.position.y !== 0);
+              position = hasManualPosition 
+                ? incoming.position 
+                : (existing?.position || { x: 30, y: 80 });
+            } else {
+              // Dataset containers always use existing ELK position
+              position = existing?.position || incoming.position || { x: 0, y: 0 };
+            }
+            
             const m: any = {
               ...(existing || incoming),
               id: incoming.id,
-              position: existing?.position || incoming.position || { x: 0, y: 0 },
+              position,
               data: {
                 ...incoming.data,
                 onNodeClick: (nodeId: string) => onNodeClick(nodeId, incoming.data),
