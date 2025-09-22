@@ -449,7 +449,7 @@ const ColumnLineageCreate: React.FC = () => {
           color="primary"
           sx={{
             position: 'fixed',
-            bottom: 88, // keep above bottom toolbar (60px) with extra spacing
+            bottom: 108, // keep above bottom toolbar (60px) with extra spacing
             right: 24,
             zIndex: 1000,
           }}

@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react';
 import { Node, Edge } from '@xyflow/react';
 
+const COLUMN_FIELD_HEIGHT = 50;
+const COLUMN_FIELD_SPACING = 24;
+const COLUMN_FIELD_TOP_OFFSET = 80;
+const COLUMN_FIELD_LEFT_OFFSET = 40;
+
 // Column lineage data structures
 export interface ColumnLineageNodeData {
   id: string;
@@ -146,8 +151,8 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
         style: {
           width: nodeData.type === 'dataset-container' ? 300 : 220,
           height: nodeData.type === 'dataset-container'
-            ? Math.max(150, 120 + (getColumnCountForDataset(nodeId) * (50 + 24)))
-            : 50,
+            ? Math.max(150, 120 + (getColumnCountForDataset(nodeId) * (COLUMN_FIELD_HEIGHT + COLUMN_FIELD_SPACING)))
+            : COLUMN_FIELD_HEIGHT,
           zIndex: nodeData.type === 'dataset-container' ? -1 : 1,
         },
       };
@@ -260,8 +265,8 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
         updateColumnNode(fieldId, fieldNodeData);
         // Position columns relative to parent (dataset container)
         updateColumnNodePosition(fieldId, { 
-          x: 40,  // Relative to parent dataset container
-          y: 80 + (index * 60)  // Relative to parent dataset container
+          x: COLUMN_FIELD_LEFT_OFFSET,  // Relative to parent dataset container
+          y: COLUMN_FIELD_TOP_OFFSET + (index * (COLUMN_FIELD_HEIGHT + COLUMN_FIELD_SPACING)),
         });
       });
     }

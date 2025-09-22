@@ -8,6 +8,7 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   Node,
   Edge,
 } from '@xyflow/react';
@@ -58,6 +59,8 @@ interface ColumnLevelFlowProps {
   totalColumns?: number;
   selectedColumn?: string;
   drawerContent?: React.ReactNode;
+  fitViewKey?: number | null;
+  onLayoutNodesUpdate?: (nodes: Node[]) => void;
 }
 
 const HEADER_HEIGHT = 64 + 1;
@@ -93,6 +96,8 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
   drawerRef,
   handlePaneClick,
   drawerContent,
+  fitViewKey,
+  onLayoutNodesUpdate,
 }) => {
   // Use drawer props or provide defaults for backward compatibility
   const drawerOpen = isDrawerOpen ?? false;
@@ -106,6 +111,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+  const reactFlowInstance = useReactFlow();
 
   // Edge click handler for selection
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
@@ -231,6 +237,28 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
     }
   }, [initialSelectionId, columnLineageGraph, onNodeClick]);
 
+  useEffect(() => {
+    if (!onLayoutNodesUpdate) return;
+    if (mode === LineageMode.CREATE) {
+      onLayoutNodesUpdate(nodes);
+    } else {
+      onLayoutNodesUpdate(layout.nodes || []);
+    }
+  }, [mode, nodes, layout.nodes, onLayoutNodesUpdate]);
+
+  useEffect(() => {
+    if (fitViewKey == null) return;
+    if (typeof window === 'undefined') return;
+    const handle = window.requestAnimationFrame(() => {
+      try {
+        reactFlowInstance.fitView({ padding: 0.1, includeHiddenNodes: false });
+      } catch (err) {
+        console.warn('ColumnLevelFlow fitView failed:', err);
+      }
+    });
+    return () => window.cancelAnimationFrame(handle);
+  }, [fitViewKey, reactFlowInstance]);
+
   if (loading) {
     return (
       <Box height="100%" display="flex" alignItems="center" justifyContent="center">
@@ -311,7 +339,7 @@ const ColumnLevelFlowInternal: React.FC<ColumnLevelFlowProps> = ({
         >
           <Background />
           <Controls />
-          {mode !== LineageMode.CREATE && <MiniMap />}
+          {mode === LineageMode.VIEW && <MiniMap />}
         </ReactFlow>
       </Box>
 

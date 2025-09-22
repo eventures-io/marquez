@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, Typography } from '@mui/material'
+import { Box, Typography, Fab } from '@mui/material'
+import Add from '@mui/icons-material/Add'
 import { useParams } from 'react-router-dom'
-import { LineageMode, NodeType } from '@app-types'
+import { Node } from '@xyflow/react'
+import { LineageMode, NodeType, DatasetType } from '@app-types'
 import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
@@ -11,6 +13,14 @@ import DatasetForm from '../../table-view/components/DatasetForm'
 import useColumnDrawerState from '../useColumnDrawerState'
 
 const DEFAULT_LINEAGE_DEPTH = 2
+const DATASET_CONTAINER_WIDTH = 300
+const DATASET_HORIZONTAL_GAP = 120
+const DATASET_INITIAL_X = 16
+const DATASET_INITIAL_Y = 50
+const COLUMN_FIELD_HEIGHT = 50
+const COLUMN_FIELD_SPACING = 24
+const COLUMN_FIELD_TOP_OFFSET = 80
+const COLUMN_FIELD_LEFT_OFFSET = 40
 
 const ColumnLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
@@ -26,6 +36,7 @@ const ColumnLineageEdit: React.FC = () => {
     addColumnEdge,
     deleteColumnEdge,
     toColumnReactFlowFormat,
+    createColumnDatasetWithFields,
   } = useColumnLineageData()
 
   const {
@@ -45,6 +56,233 @@ const ColumnLineageEdit: React.FC = () => {
   } = useColumnDrawerState()
 
   const initializedRef = useRef(false)
+  const newDatasetCounterRef = useRef(0)
+  const layoutNodesRef = useRef<Node[]>([])
+  const [fitViewKey, setFitViewKey] = useState<number | null>(null)
+
+  const handleLayoutNodesUpdate = useCallback((nodes: Node[]) => {
+    layoutNodesRef.current = nodes
+  }, [])
+
+  const computeNewDatasetPosition = useCallback((fieldCount: number) => {
+    const datasetNodes = Array.from(columnLineageData.nodes.values())
+      .filter((node) => node.type === 'dataset-container')
+
+    const layoutDatasetNodes = layoutNodesRef.current.filter((node) => node.type === 'dataset-container')
+
+    let xPosition = DATASET_INITIAL_X + datasetNodes.length * (DATASET_CONTAINER_WIDTH + DATASET_HORIZONTAL_GAP)
+    let yPosition = DATASET_INITIAL_Y
+
+    let maxRightEdge = -Infinity
+    let anchorY = DATASET_INITIAL_Y
+
+    layoutDatasetNodes.forEach((node) => {
+      const width = typeof node.style?.width === 'number' ? node.style.width : DATASET_CONTAINER_WIDTH
+      const position = node.position || { x: DATASET_INITIAL_X, y: DATASET_INITIAL_Y }
+      const rightEdge = (position.x || 0) + width
+      if (rightEdge > maxRightEdge) {
+        maxRightEdge = rightEdge
+        anchorY = position.y || DATASET_INITIAL_Y
+      }
+    })
+
+    if (maxRightEdge > -Infinity) {
+      xPosition = maxRightEdge + DATASET_HORIZONTAL_GAP
+      yPosition = anchorY
+    } else {
+      // If layout data isn't available yet, fall back to stored node positions
+      datasetNodes.forEach((node) => {
+        const pos = nodePositions.get(node.id)
+        if (pos) {
+          yPosition = pos.y
+        }
+      })
+    }
+
+    if (datasetNodes.length === 0) {
+      const HEADER_OFFSET = 120
+      const MIN_HEIGHT = 150
+      const VIEW_HEADER = 65
+      const FLOW_FOOTER = 60
+      const desiredHeight = Math.max(
+        MIN_HEIGHT,
+        HEADER_OFFSET + fieldCount * (COLUMN_FIELD_HEIGHT + COLUMN_FIELD_SPACING),
+      )
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800
+      const containerHeight = Math.max(0, viewportHeight - VIEW_HEADER - FLOW_FOOTER)
+      yPosition = Math.max(16, Math.floor((containerHeight - desiredHeight) / 2))
+      xPosition = DATASET_INITIAL_X
+    }
+
+    return { x: xPosition, y: yPosition }
+  }, [columnLineageData.nodes, nodePositions])
+
+  const buildDatasetFormData = useCallback((datasetId: string | null, isNewDataset: boolean) => {
+    const emptyDataset = () => ({
+      id: '',
+      label: '',
+      type: NodeType.DATASET,
+      dataset: {
+        id: { namespace: '', name: '' },
+        namespace: '',
+        name: '',
+        description: '',
+        fields: [],
+        type: DatasetType.DB_TABLE,
+        physicalName: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sourceName: '',
+        facets: {},
+        tags: [],
+        lastModifiedAt: new Date().toISOString(),
+      },
+    })
+
+    if (isNewDataset || !datasetId) {
+      return emptyDataset()
+    }
+
+    const datasetNode = columnLineageData.nodes.get(datasetId)
+    if (!datasetNode || datasetNode.type !== 'dataset-container') {
+      return emptyDataset()
+    }
+
+    const columnFields = Array.from(columnLineageData.nodes.values())
+      .filter((node) => node.type === 'column-field' && (node.data as any)?.parentDatasetId === datasetId)
+      .map((fieldNode) => ({
+        name: (fieldNode.data as any)?.fieldName || '',
+        type: (fieldNode.data as any)?.dataType || 'string',
+        tags: [],
+        description: '',
+      }))
+
+    return {
+      id: datasetId,
+      label: (datasetNode.data as any)?.name || '',
+      type: NodeType.DATASET,
+      dataset: {
+        id: {
+          namespace: (datasetNode.data as any)?.namespace || '',
+          name: (datasetNode.data as any)?.name || '',
+        },
+        namespace: (datasetNode.data as any)?.namespace || '',
+        name: (datasetNode.data as any)?.name || '',
+        description: (datasetNode.data as any)?.description || '',
+        fields: columnFields,
+        type: DatasetType.DB_TABLE,
+        physicalName: (datasetNode.data as any)?.name || '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sourceName: '',
+        facets: {},
+        tags: [],
+        lastModifiedAt: new Date().toISOString(),
+      },
+    }
+  }, [columnLineageData.nodes])
+
+  const handleDatasetFormSubmit = useCallback((datasetFormData: any, options: { isNew: boolean; datasetId?: string }) => {
+    const fields: Array<{ name: string; type: string }> = Array.isArray(datasetFormData?.dataset?.fields)
+      ? datasetFormData.dataset.fields.map((field: any) => ({ name: field.name, type: field.type || 'string' }))
+      : []
+
+    if (options.isNew) {
+      const namespace = datasetFormData?.dataset?.namespace || 'temp-namespace'
+      const name = datasetFormData?.dataset?.name || `dataset-${Date.now()}`
+      const proposedId = `dataset:${namespace}:${name}`
+      const datasetId = columnLineageData.nodes.has(proposedId)
+        ? `column-dataset-${Date.now()}-${newDatasetCounterRef.current++}`
+        : proposedId
+
+      const position = computeNewDatasetPosition(fields.length)
+      createColumnDatasetWithFields(datasetId, position, datasetFormData)
+      setFitViewKey((prev) => (prev == null ? 0 : prev + 1))
+      setHasUnsavedChanges(true)
+      handlePaneClick()
+      return
+    }
+
+    const targetDatasetId = options.datasetId
+    if (!targetDatasetId) {
+      return
+    }
+
+    updateColumnNode(targetDatasetId, {
+      id: targetDatasetId,
+      type: 'dataset-container',
+      data: {
+        id: targetDatasetId,
+        namespace: datasetFormData.dataset.namespace,
+        name: datasetFormData.dataset.name,
+        description: datasetFormData.dataset.description,
+      },
+    })
+
+    const sanitize = (value: string) => (value || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_')
+
+    const existingFieldNodes = Array.from(columnLineageData.nodes.values())
+      .filter((node) => node.type === 'column-field' && (node.data as any)?.parentDatasetId === targetDatasetId)
+
+    const existingByName = new Map<string, { id: string; node: any }>()
+    existingFieldNodes.forEach((node) => {
+      const key = sanitize(((node.data as any)?.fieldName || '') as string)
+      existingByName.set(key, { id: node.id, node })
+    })
+
+    const requestedByName = new Map<string, { name: string; type: string }>()
+    fields.forEach((field) => requestedByName.set(sanitize(field.name), field))
+
+    existingFieldNodes.forEach((node) => {
+      const key = sanitize(((node.data as any)?.fieldName || '') as string)
+      if (!requestedByName.has(key)) {
+        deleteColumnNode(node.id)
+      }
+    })
+
+    fields.forEach((field, index) => {
+      const key = sanitize(field.name)
+      const existing = existingByName.get(key)
+      const fieldPosition = {
+        x: COLUMN_FIELD_LEFT_OFFSET,
+        y: COLUMN_FIELD_TOP_OFFSET + index * (COLUMN_FIELD_HEIGHT + COLUMN_FIELD_SPACING),
+      }
+
+      if (existing) {
+        updateColumnNode(existing.id, {
+          id: existing.id,
+          type: 'column-field',
+          data: {
+            id: existing.id,
+            namespace: datasetFormData.dataset.namespace,
+            datasetName: datasetFormData.dataset.name,
+            fieldName: field.name,
+            dataType: field.type,
+            parentDatasetId: targetDatasetId,
+          },
+        })
+        updateColumnNodePosition(existing.id, fieldPosition)
+      } else {
+        const fieldId = `${targetDatasetId}-field-${key}`
+        updateColumnNode(fieldId, {
+          id: fieldId,
+          type: 'column-field',
+          data: {
+            id: fieldId,
+            namespace: datasetFormData.dataset.namespace,
+            datasetName: datasetFormData.dataset.name,
+            fieldName: field.name,
+            dataType: field.type,
+            parentDatasetId: targetDatasetId,
+          },
+        })
+        updateColumnNodePosition(fieldId, fieldPosition)
+      }
+    })
+
+    setHasUnsavedChanges(true)
+    handlePaneClick()
+  }, [columnLineageData.nodes, computeNewDatasetPosition, createColumnDatasetWithFields, deleteColumnNode, handlePaneClick, setFitViewKey, setHasUnsavedChanges, updateColumnNode, updateColumnNodePosition])
 
 
   // Function to reorder column lineage data based on dataset field definitions
@@ -229,142 +467,42 @@ const ColumnLineageEdit: React.FC = () => {
     return Array.from(columnLineageData.nodes.values()).filter(n => n.type === 'column-field').length
   }, [graph, columnLineageData.nodes])
 
-  // Create custom drawer content based on selected node type
-  const getDrawerContent = () => {
-    if (!selectedDatasetId) {
-      return null; // Default column details pane will be shown
+  const drawerContent = useMemo(() => {
+    const isNewDataset = !selectedDatasetId && (selectedNodeData as any)?.isNewDataset
+
+    if (!isNewDataset && !selectedDatasetId) {
+      return null
     }
-    
-    // Check if the selected node is a dataset container
-    const selectedNode = columnLineageData.nodes.get(selectedDatasetId);
-    if (selectedNode?.type === 'dataset-container') {
-      // Show dataset edit form
-      return (
-        <Box p={3} sx={{ width: '100%', maxWidth: 400 }}>
-          <Typography variant="h6" sx={{ mb: 2, mt: 4 }}>
-            Edit Dataset
-          </Typography>
-          <DatasetForm
-            selectedNodeData={(() => {
-              const dsNode = columnLineageData.nodes.get(selectedDatasetId)
-              const fields = Array.from(columnLineageData.nodes.values())
-                .filter(n => n.type === 'column-field' && (n.data as any)?.parentDatasetId === selectedDatasetId)
-                .map(n => ({ name: (n.data as any)?.fieldName || '', type: (n.data as any)?.dataType || 'string' }))
-              return {
-                id: selectedDatasetId,
-                label: (dsNode as any)?.data?.name || '',
-                type: NodeType.DATASET,
-                dataset: {
-                  id: { namespace: (dsNode as any)?.data?.namespace || '', name: (dsNode as any)?.data?.name || '' },
-                  namespace: (dsNode as any)?.data?.namespace || '',
-                  name: (dsNode as any)?.data?.name || '',
-                  description: (dsNode as any)?.data?.description || '',
-                  fields,
-                  type: 'DB_TABLE',
-                  physicalName: (dsNode as any)?.data?.name || '',
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  sourceName: '',
-                  facets: {},
-                  tags: [],
-                  lastModifiedAt: new Date().toISOString()
-                }
-              }
-            })() as any}
-            selectedNodeId={selectedDatasetId}
-            onUpdate={(datasetData: any) => {
-              if (!selectedDatasetId) return
-              // Update dataset container
-              updateColumnNode(selectedDatasetId, {
-                id: selectedDatasetId,
-                type: 'dataset-container',
-                data: {
-                  id: selectedDatasetId,
-                  namespace: datasetData.dataset.namespace,
-                  name: datasetData.dataset.name,
-                  description: datasetData.dataset.description,
-                },
-              })
 
-              // Merge column fields (preserve existing, add new, remove deleted)
-              const sanitize = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_')
-              const existingFieldNodes = Array.from(columnLineageData.nodes.values())
-                .filter(n => n.type === 'column-field' && (n.data as any)?.parentDatasetId === selectedDatasetId)
-              const existingByName = new Map<string, { id: string; node: any }>()
-              existingFieldNodes.forEach(n => {
-                const name = ((n.data as any)?.fieldName || '') as string
-                existingByName.set(sanitize(name), { id: n.id, node: n })
-              })
+    const heading = isNewDataset ? 'Create Dataset' : 'Edit Dataset'
+    const formData = buildDatasetFormData(isNewDataset ? null : selectedDatasetId, !!isNewDataset)
+    const datasetIdForUpdate = isNewDataset ? undefined : (selectedDatasetId || undefined)
 
-              const requestedFields: Array<{ name: string; type: string }> = (datasetData.dataset.fields || []).map((f: any) => ({ name: f.name, type: f.type || 'string' }))
-              const requestedByName = new Map<string, { name: string; type: string }>()
-              requestedFields.forEach(f => requestedByName.set(sanitize(f.name), f))
+    return (
+      <Box p={3} sx={{ width: '100%', maxWidth: 400 }}>
+        <Typography variant="h6" sx={{ mb: 2, mt: 4 }}>
+          {heading}
+        </Typography>
+        <DatasetForm
+          selectedNodeData={formData as any}
+          selectedNodeId={datasetIdForUpdate ?? null}
+          onUpdate={(datasetData: any) => handleDatasetFormSubmit(datasetData, {
+            isNew: !!isNewDataset,
+            datasetId: datasetIdForUpdate,
+          })}
+          onClose={handlePaneClick}
+          forceEditable={true}
+          requireAtLeastOneField={true}
+        />
+      </Box>
+    )
+  }, [selectedDatasetId, selectedNodeData, buildDatasetFormData, handleDatasetFormSubmit, handlePaneClick])
 
-              // Remove fields that are no longer present
-              existingFieldNodes.forEach(n => {
-                const key = sanitize(((n.data as any)?.fieldName) || '')
-                if (!requestedByName.has(key)) {
-                  deleteColumnNode(n.id)
-                }
-              })
+  const handleFloatingButtonClick = useCallback(() => {
+    drawerHandleNodeClick('', { isNewDataset: true })
+  }, [drawerHandleNodeClick])
 
-              // Add or update requested fields and position them correctly
-              const SPACING = 24
-              const FIELD_HEIGHT = 50
-              requestedFields.forEach((f, index) => {
-                const key = sanitize(f.name)
-                const existing = existingByName.get(key)
-                const fieldPosition = { x: 20, y: 60 + index * (FIELD_HEIGHT + SPACING) }
-                
-                if (existing) {
-                  // Update existing field node data
-                  updateColumnNode(existing.id, {
-                    id: existing.id,
-                    type: 'column-field',
-                    data: {
-                      id: existing.id,
-                      namespace: datasetData.dataset.namespace,
-                      datasetName: datasetData.dataset.name,
-                      fieldName: f.name,
-                      dataType: f.type,
-                      parentDatasetId: selectedDatasetId,
-                    },
-                  })
-                  // Update position for correct ordering
-                  updateColumnNodePosition(existing.id, fieldPosition)
-                } else {
-                  // Create a stable id per field name
-                  const fieldId = `${selectedDatasetId}-field-${key}`
-                  updateColumnNode(fieldId, {
-                    id: fieldId,
-                    type: 'column-field',
-                    data: {
-                      id: fieldId,
-                      namespace: datasetData.dataset.namespace,
-                      datasetName: datasetData.dataset.name,
-                      fieldName: f.name,
-                      dataType: f.type,
-                      parentDatasetId: selectedDatasetId,
-                    },
-                  })
-                  // Position new field in correct order
-                  updateColumnNodePosition(fieldId, fieldPosition)
-                }
-              })
-
-              setHasUnsavedChanges(true)
-              handlePaneClick()
-            }}
-            onClose={handlePaneClick}
-            forceEditable={true}
-            requireAtLeastOneField={true}
-          />
-        </Box>
-      );
-    }
-    
-    return null; // Default column details pane will be shown
-  };
+  const showFloatingButton = !loading
 
   return (
     <Box sx={{ position: 'relative', height: '100vh' }}>
@@ -390,8 +528,25 @@ const ColumnLineageEdit: React.FC = () => {
         selectedNodeData={selectedNodeData}
         drawerRef={drawerRef}
         handlePaneClick={handlePaneClick}
-        drawerContent={getDrawerContent()}
+        drawerContent={drawerContent}
+        fitViewKey={fitViewKey}
+        onLayoutNodesUpdate={handleLayoutNodesUpdate}
       />
+
+      {showFloatingButton && (
+        <Fab
+          color="primary"
+          sx={{
+            position: 'fixed',
+            bottom: 108,
+            right: 24,
+            zIndex: 1000,
+          }}
+          onClick={handleFloatingButtonClick}
+        >
+          <Add />
+        </Fab>
+      )}
     </Box>
   )
 }
