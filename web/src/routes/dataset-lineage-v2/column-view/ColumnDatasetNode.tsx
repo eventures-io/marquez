@@ -1,13 +1,11 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Box, Typography, Chip } from '@mui/material';
-import { NodeType } from '@app-types';
+import { Box, Typography } from '@mui/material';
 
 interface ColumnDatasetNodeData {
   id: string;
   namespace: string;
   name: string;
-  type: NodeType;
   description?: string;
   columnCount?: number;
   onNodeClick?: (nodeId: string, nodeData: any) => void;

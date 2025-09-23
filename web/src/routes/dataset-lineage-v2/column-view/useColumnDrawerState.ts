@@ -22,9 +22,6 @@ const useColumnDrawerState = (): ColumnDrawerState => {
   const [highlightedPath, setHighlightedPath] = useState<string[]>([]);
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    console.log('useColumnDrawerState: isDrawerOpen state changed', isDrawerOpen);
-  }, [isDrawerOpen]);
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
     setSelectedNodeId(nodeId);
@@ -45,7 +42,6 @@ const useColumnDrawerState = (): ColumnDrawerState => {
   }, []);
 
   const handlePaneClick = useCallback(() => {
-    console.log('useColumnDrawerState: handlePaneClick invoked')
     setIsDrawerOpen(false);
     setSelectedNodeId(null);
     setSelectedNodeData(null);
@@ -55,17 +51,12 @@ const useColumnDrawerState = (): ColumnDrawerState => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      console.log('useColumnDrawerState: handleClickOutside fired', {
-        isDrawerOpen,
-        targetClass: (event.target as HTMLElement)?.className,
-      });
       if (!isDrawerOpen) return;
 
       const target = event.target as HTMLElement;
 
       const insideDrawer = !!(drawerRef.current && drawerRef.current.contains(target));
       const clickedNode = !!target.closest('.react-flow__node');
-      console.log('useColumnDrawerState: outside click evaluation', { insideDrawer, clickedNode });
 
       if (insideDrawer) {
         return;
@@ -75,24 +66,16 @@ const useColumnDrawerState = (): ColumnDrawerState => {
         return;
       }
 
-      console.log('useColumnDrawerState: closing drawer from outside click');
-      console.log('useColumnDrawerState: current state before update:', { isDrawerOpen, selectedNodeId });
       setIsDrawerOpen(false);
       setSelectedNodeId(null);
       setSelectedNodeData(null);
-      console.log('useColumnDrawerState: state update calls completed');
     };
 
-    console.log('useColumnDrawerState: setting up click listener, isDrawerOpen:', isDrawerOpen);
     if (isDrawerOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      console.log('useColumnDrawerState: mousedown listener added');
-    } else {
-      console.log('useColumnDrawerState: drawer closed, not adding listener');
     }
 
     return () => {
-      console.log('useColumnDrawerState: removing mousedown listener');
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isDrawerOpen]);

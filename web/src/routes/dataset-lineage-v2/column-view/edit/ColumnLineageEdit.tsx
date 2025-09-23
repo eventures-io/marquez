@@ -431,14 +431,11 @@ const ColumnLineageEdit: React.FC = () => {
   }, [addColumnEdge, setHasUnsavedChanges])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
-    console.log('Deleting edge:', edgeId)
     deleteColumnEdge(edgeId)
     setHasUnsavedChanges(true)
   }, [deleteColumnEdge, setHasUnsavedChanges])
 
   const handleSave = useCallback(async () => {
-    console.log('Saving lineage with edges:', Array.from(columnLineageData.edges.keys()))
-    console.log('Total edges to save:', columnLineageData.edges.size)
     await saveColumnLineage(columnLineageData, nodePositions)
   }, [saveColumnLineage, columnLineageData, nodePositions])
 

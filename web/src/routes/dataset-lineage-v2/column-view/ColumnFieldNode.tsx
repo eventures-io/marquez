@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { Box, Typography, Chip } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 
 interface ColumnFieldNodeData {
   id: string;
@@ -28,15 +28,6 @@ const ColumnFieldNode: React.FC<NodeProps> = ({
     }
   };
 
-  const getTypeColor = (type?: string) => {
-    if (!type) return 'default';
-    const lowerType = type.toLowerCase();
-    if (lowerType.includes('int') || lowerType.includes('number')) return 'info';
-    if (lowerType.includes('string') || lowerType.includes('varchar') || lowerType.includes('text')) return 'success';
-    if (lowerType.includes('date') || lowerType.includes('time')) return 'warning';
-    if (lowerType.includes('bool')) return 'secondary';
-    return 'default';
-  };
 
   const getNodeStyle = () => {
     return {

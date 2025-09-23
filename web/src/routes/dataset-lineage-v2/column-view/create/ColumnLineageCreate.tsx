@@ -44,26 +44,16 @@ const ColumnLineageCreate: React.FC = () => {
 
 
   const handleNodeClick = useCallback((nodeId: string, nodeData: any) => {
-    console.log('handleNodeClick called:', { 
-      nodeId, 
-      nodeDataKeys: Object.keys(nodeData),
-      fullNodeData: nodeData 
-    })
-    
     // Check if this is a dataset container by nodeId pattern
     if (nodeId.startsWith('column-dataset-') && !nodeId.includes('-field-')) {
       // Click on dataset container - edit this dataset
-      console.log('Clicking dataset container, setting selectedDatasetId:', nodeId)
       drawerHandleNodeClick(nodeId, nodeData)
     } else if (nodeId.includes('-field-')) {
       // Click on column field - edit the parent dataset
       const parentDatasetId = nodeData.parentDatasetId
-      console.log('Clicking column field, parent dataset:', parentDatasetId)
       if (parentDatasetId) {
         drawerHandleNodeClick(parentDatasetId, nodeData)
       }
-    } else {
-      console.log('Unknown node type for nodeId:', nodeId)
     }
   }, [drawerHandleNodeClick])
 
@@ -256,12 +246,9 @@ const ColumnLineageCreate: React.FC = () => {
   }, [drawerHandleNodeClick])
 
   const handleDrawerClose = useCallback(() => {
-    console.log('ColumnLineageCreate: handleDrawerClose invoked')
     // Only allow closing if we have at least one dataset
     if (columnLineageData.nodes.size > 0) {
       handlePaneClick()
-    } else {
-      console.log('ColumnLineageCreate: Cannot close drawer - no datasets created yet')
     }
   }, [columnLineageData.nodes.size, handlePaneClick])
 
