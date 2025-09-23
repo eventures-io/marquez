@@ -27,9 +27,11 @@ export const createTableLevelElements = (
     if (node.type === NodeType.JOB) {
       const jobData = node.data as LineageJob;
       // Map API fields to expected interface
+      // TODO copy to new code base
       const mappedJobData = {
         ...jobData,
         sourceCodeLocation: jobData.location, // Map location to sourceCodeLocation
+        sourceCode: jobData.transformationCode, // Map transformationCode to sourceCode
       };
       const newNode = {
         id: node.id,
