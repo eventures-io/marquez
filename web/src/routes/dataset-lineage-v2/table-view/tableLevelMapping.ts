@@ -26,6 +26,11 @@ export const createTableLevelElements = (
   for (const node of filteredGraph) {
     if (node.type === NodeType.JOB) {
       const jobData = node.data as LineageJob;
+      // Map API fields to expected interface
+      const mappedJobData = {
+        ...jobData,
+        sourceCodeLocation: jobData.location, // Map location to sourceCodeLocation
+      };
       const newNode = {
         id: node.id,
         type: 'tableLevel',
@@ -34,7 +39,7 @@ export const createTableLevelElements = (
         data: {
           label: jobData.simpleName || jobData.name,
           type: NodeType.JOB,
-          job: jobData,
+          job: mappedJobData,
           id: node.id,
         },
       };

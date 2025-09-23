@@ -118,6 +118,28 @@ export class LineageService {
           query: sqlQuery.trim()
         };
       }
+      // TODO add this when transferring to new code base
+      // Add source code facet if source code is provided
+      const sourceCode = (jobNode.job as any).sourceCode;
+      if (sourceCode && sourceCode.trim()) {
+        jobFacets.sourceCode = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeJobFacet.json',
+          language: 'unknown',
+          sourceCode: sourceCode.trim()
+        };
+      }
+      
+      // Add source code location facet if location is provided
+      const sourceCodeLocation = (jobNode.job as any).sourceCodeLocation;
+      if (sourceCodeLocation && sourceCodeLocation.trim()) {
+        jobFacets.sourceCodeLocation = {
+          _producer: 'https://github.com/MarquezProject/marquez-ui',
+          _schemaURL: 'https://openlineage.io/spec/facets/1-0-0/SourceCodeLocationJobFacet.json',
+          type: 'git',
+          url: sourceCodeLocation.trim()
+        };
+      }
       
       // Build run facets
       const runFacets: any = {};
