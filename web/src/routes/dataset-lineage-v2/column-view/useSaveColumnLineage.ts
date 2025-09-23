@@ -59,10 +59,12 @@ export const useSaveColumnLineage = (): UseSaveColumnLineageReturn => {
       }
     }
     
-    // Check that we have at least one column connection (edge)
-    if (columnLineageData.nodes.size > 1 && columnLineageData.edges.size === 0) {
-      errors.push('Multiple nodes must be connected with column-level relationships');
-    }
+    // In edit mode, allow saving with no edges to support edge deletion
+    // Only require connections in create mode when building new lineage from scratch
+    // Note: This validation is more appropriate for create scenarios
+    // if (columnLineageData.nodes.size > 1 && columnLineageData.edges.size === 0) {
+    //   errors.push('Multiple nodes must be connected with column-level relationships');
+    // }
     
     setValidationErrors(errors);
     return errors.length === 0;

@@ -8,7 +8,7 @@ import ColumnLevelFlow from '../ColumnLevelFlow'
 import { useColumnLineageData } from '../useColumnLineageData'
 import { useSaveColumnLineage } from '../useSaveColumnLineage'
 import { getColumnLineage } from '../../../../store/requests/columnlineage'
-import { getDataset } from '../../../../store/requests/datasets'
+import { getDataset, deleteDataset } from '../../../../store/requests/datasets'
 import DatasetForm from '../../table-view/components/DatasetForm'
 import useColumnDrawerState from '../useColumnDrawerState'
 
@@ -26,6 +26,7 @@ const ColumnLineageEdit: React.FC = () => {
   const { namespace, name } = useParams<{ namespace: string; name: string }>()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [originalNodeIds, setOriginalNodeIds] = useState<Set<string>>(new Set())
 
   const {
     columnLineageData,
@@ -405,6 +406,18 @@ const ColumnLineageEdit: React.FC = () => {
           }
         }
 
+        // Track original node IDs for deletion tracking during save
+        // Use the same ID format as what gets stored in local state
+        const originalIds = new Set<string>()
+        for (const node of reorderedData?.graph || []) {
+          const dsId = `dataset:${node.data.namespace}:${node.data.dataset}`
+          originalIds.add(dsId)
+          originalIds.add(node.id) // Use the exact node ID that was stored
+        }
+        setOriginalNodeIds(originalIds)
+        
+        console.log('Original IDs tracked:', Array.from(originalIds))
+        
         initializedRef.current = true
       } catch (e: any) {
         setError('Failed to load column lineage for edit')
@@ -431,18 +444,63 @@ const ColumnLineageEdit: React.FC = () => {
   }, [addColumnEdge, setHasUnsavedChanges])
 
   const handleEdgeDelete = useCallback((edgeId: string) => {
+    console.log('Column Edit: Deleting edge:', edgeId)
+    console.log('Column Edit: Edges before deletion:', Array.from(columnLineageData.edges.keys()))
     deleteColumnEdge(edgeId)
     setHasUnsavedChanges(true)
-  }, [deleteColumnEdge, setHasUnsavedChanges])
+  }, [deleteColumnEdge, setHasUnsavedChanges, columnLineageData.edges])
 
   const handleNodeDelete = useCallback((nodeId: string) => {
+    console.log('Deleting node:', nodeId, 'from local state')
     deleteColumnNode(nodeId)
     setHasUnsavedChanges(true)
   }, [deleteColumnNode, setHasUnsavedChanges])
 
   const handleSave = useCallback(async () => {
-    await saveColumnLineage(columnLineageData, nodePositions)
-  }, [saveColumnLineage, columnLineageData, nodePositions])
+    try {
+      // First, handle deletions for existing saved nodes
+      const currentNodeIds = new Set(columnLineageData.nodes.keys())
+      const deletedNodeIds = Array.from(originalNodeIds).filter(id => !currentNodeIds.has(id))
+      
+      console.log('Column Save Debug:', {
+        originalNodeIds: Array.from(originalNodeIds),
+        currentNodeIds: Array.from(currentNodeIds), 
+        deletedNodeIds,
+        currentEdges: Array.from(columnLineageData.edges.keys()),
+        edgeCount: columnLineageData.edges.size
+      })
+      
+      console.log('Calling saveColumnLineage with edges:', Array.from(columnLineageData.edges.keys()))
+      
+      if (deletedNodeIds.length > 0) {
+        console.log('Processing deletions:', deletedNodeIds)
+        // We need to get the original node data to know namespace/name for deletion
+        // For now, we'll need to parse the node ID format: "type:namespace:name"
+        for (const nodeId of deletedNodeIds) {
+          try {
+            const parts = nodeId.split(':')
+            if (parts.length >= 3 && parts[0] === 'dataset') {
+              const namespace = parts[1] 
+              const name = parts.slice(2).join(':') // Handle names with colons
+              
+              console.log(`Deleting dataset: ${namespace}:${name}`)
+              await deleteDataset(namespace, name)
+              console.log(`Successfully deleted dataset: ${namespace}:${name}`)
+            }
+            // Column field deletions don't need API calls - they're handled by dataset updates
+          } catch (error) {
+            console.error(`Failed to delete node ${nodeId}:`, error)
+            // Continue with other deletions even if one fails
+          }
+        }
+      }
+      
+      await saveColumnLineage(columnLineageData, nodePositions)
+    } catch (error) {
+      console.error('Save failed:', error)
+      throw error // Re-throw so the save hook can handle it
+    }
+  }, [saveColumnLineage, columnLineageData, nodePositions, originalNodeIds])
 
   const graph = useMemo(() => {
     // In edit mode, always use the internal editable data format to reflect real-time changes
