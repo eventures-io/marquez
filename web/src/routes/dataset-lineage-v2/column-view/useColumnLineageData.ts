@@ -68,27 +68,44 @@ export const useColumnLineageData = (): UseColumnLineageDataReturn => {
   }, []);
 
   const deleteColumnNode = useCallback((nodeId: string) => {
+    const removedIds = new Set<string>();
+
     setColumnLineageData(prev => {
       const newNodes = new Map(prev.nodes);
       const newEdges = new Map(prev.edges);
-      
-      // Remove the node
-      newNodes.delete(nodeId);
-      
-      // Remove all edges connected to this node
+
+      const targetNode = newNodes.get(nodeId);
+      if (!targetNode) {
+        return prev;
+      }
+
+      removedIds.add(nodeId);
+
+      if (targetNode.type === 'dataset-container') {
+        for (const [childId, childNode] of newNodes) {
+          if (childNode.type === 'column-field' && childNode.data.parentDatasetId === nodeId) {
+            removedIds.add(childId);
+          }
+        }
+      }
+
+      removedIds.forEach(id => newNodes.delete(id));
+
       for (const [edgeId, edge] of newEdges) {
-        if (edge.source === nodeId || edge.target === nodeId) {
+        if (removedIds.has(edge.source) || removedIds.has(edge.target)) {
           newEdges.delete(edgeId);
         }
       }
-      
+
       return { nodes: newNodes, edges: newEdges };
     });
-    
-    // Remove node position
+
     setNodePositions(prev => {
+      if (removedIds.size === 0) {
+        return prev;
+      }
       const newPositions = new Map(prev);
-      newPositions.delete(nodeId);
+      removedIds.forEach(id => newPositions.delete(id));
       return newPositions;
     });
   }, []);
