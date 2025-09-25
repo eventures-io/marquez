@@ -1,0 +1,374 @@
+Detailed Analysis of Marquez Graph Persistence Patterns
+
+  1. Event Sourcing Pattern
+
+  Implementation in lineage_events table:
+  - Event Storage: All lineage changes are stored as immutable OpenLineage events in JSONB format (OpenLineageDao.java:90-108)
+  - Event Types: THREE distinct event types: RUN_EVENT, DATASET_EVENT, JOB_EVENT (OpenLineageDao.java:84-88)
+  - Immutable Log: Events never modified, only appended with timestamps (event_time, event columns)
+  - State Reconstruction: Current system state reconstructed by processing events in chronological order
+  - Complete Event Data: Each event contains full context (producer, job_name, job_namespace, run_id)
+
+  Benefits:
+  - Audit Trail: Complete history of all lineage changes preserved
+  - Time Travel: Can reconstruct graph state at any point in time
+  - Debugging: Event log provides full context for troubleshooting lineage issues
+  - Replay Capability: Events can be replayed to rebuild corrupted state
+
+  2. Recursive CTE Graph Traversal
+
+  Complex Query in LineageDao.java:56-99:
+
+  WITH RECURSIVE
+    job_io AS (
+      -- Build job I/O mapping from current versions
+      SELECT job_uuid, job_symlink_target_uuid,
+             ARRAY_AGG(DISTINCT dataset_uuid) FILTER (WHERE io_type='INPUT') AS inputs,
+             ARRAY_AGG(DISTINCT dataset_uuid) FILTER (WHERE io_type='OUTPUT') AS outputs
+      FROM job_versions_io_mapping
+      WHERE is_current_job_version = TRUE
+      GROUP BY job_symlink_target_uuid, job_uuid
+    ),
+    lineage(job_uuid, inputs, outputs, depth) AS (
+      -- Base case: starting jobs
+      SELECT job_uuid, inputs, outputs, 0 AS depth
+      FROM job_io WHERE job_uuid IN (<jobIds>)
+      UNION
+      -- Recursive case: connected jobs through shared datasets
+      SELECT io.job_uuid, io.inputs, io.outputs, l.depth + 1
+      FROM job_io io, lineage l
+      WHERE array_cat(io.inputs, io.outputs) && array_cat(l.inputs, l.outputs)
+        AND depth < :depth
+    )
+
+  Key Features:
+  - Breadth-First Search: Explores graph level by level using depth counter
+  - Dataset-as-Edge: Jobs connected through shared input/output datasets
+  - Array Intersection: && operator finds overlapping datasets between jobs
+  - Depth Limiting: Prevents infinite recursion with configurable depth parameter
+  - Performance: Single query replaces multiple round-trips to database
+
+  3. Bidirectional Mapping
+
+  Job-to-Dataset Mapping (LineageService.java:140-177):
+  Map<DatasetData, Set<UUID>> dsInputToJob = new HashMap<>();  // Dataset → consuming jobs
+  Map<DatasetData, Set<UUID>> dsOutputToJob = new HashMap<>(); // Dataset → producing jobs
+
+  // Build bidirectional indexes
+  inputs.forEach(ds -> dsInputToJob.computeIfAbsent(ds, e -> new HashSet<>()).add(jobUuid));
+  outputs.forEach(ds -> dsOutputToJob.computeIfAbsent(ds, e -> new HashSet<>()).add(jobUuid));
+
+  Dataset-to-Job Edge Construction (LineageService.java:189-199):
+  Node datasetNode = new Node(
+    datasetId,
+    DATASET,
+    dataset,
+    buildJobEdge(dsOutputToJob.get(dataset), origin, jobDataMap),  // Incoming from producers
+    buildJobEdge(origin, dsInputToJob.get(dataset), jobDataMap)   // Outgoing to consumers
+  );
+
+  Benefits:
+  - Efficient Queries: O(1) lookup for job/dataset relationships
+  - Complete Graph: Both upstream and downstream connections tracked
+  - Navigation: Enables traversal in both directions through lineage graph
+
+  4. Version Tracking in Column Lineage
+
+  Specific Dataset Version References (V49__column_lineage.sql:3-13):
+  CREATE TABLE column_lineage (
+    output_dataset_version_uuid uuid REFERENCES dataset_versions(uuid),
+    output_dataset_field_uuid   uuid REFERENCES dataset_fields(uuid),
+    input_dataset_version_uuid  uuid REFERENCES dataset_versions(uuid),
+    input_dataset_field_uuid    uuid REFERENCES dataset_fields(uuid),
+    -- Constraint ensures no duplicate mappings
+    UNIQUE (output_dataset_version_uuid, output_dataset_field_uuid,
+            input_dataset_version_uuid, input_dataset_field_uuid)
+  );
+
+  Version Creation Logic (OpenLineageDao.java:955-984):
+  - Read Operations: Use existing dataset version if available
+  - Write Operations: Always create new dataset version with UUID based on:
+    - Namespace, source, dataset name, schema fields, lifecycle state, run UUID
+  - Schema Versioning: Links to dataset_schema_versions for field definitions
+  - Run Attribution: Output versions tied to specific run that created them
+
+  Benefits:
+  - Point-in-Time Accuracy: Column lineage reflects exact schema at time of processing
+  - Schema Evolution: Different versions track schema changes over time
+  - Reproducibility: Can reconstruct exact column mappings for any historical run
+
+  5. Complete Replacement Strategy
+
+  UI Implementation (LineageService.ts:374-376):
+  // Consistent job identity enables replacement
+  const jobNamespace = tgtDataset.namespace || 'ui';
+  const jobName = `ui.column_lineage.${tgtDataset.namespace}.${tgtDataset.name}`;
+
+  Event Pair Generation (LineageService.ts:445-451):
+  // START event establishes new mappings
+  const startEvent = { eventType: EventType.START, eventTime: timestamp, ...baseEvent };
+  // COMPLETE event finalizes the replacement
+  const completeEvent = { eventType: EventType.COMPLETE, eventTime: completeTime, ...baseEvent };
+
+  Backend Processing:
+  - Job Identity: Same job name ensures updates target existing job
+  - Complete Facet: ColumnLineage facet contains ALL current mappings for dataset
+  - Atomic Update: START/COMPLETE event pair processes as single transaction
+  - Mapping Deletion: Missing mappings from new event effectively deleted
+
+  Benefits:
+  - No Orphans: Complete replacement prevents stale column lineage entries
+  - Consistency: All-or-nothing updates maintain data integrity
+  - UI Synchronization: Frontend state exactly matches database state
+
+  6. Referential Integrity and UUID Usage
+
+  Foreign Key Constraints:
+  - dataset_versions(uuid) ← column_lineage.output_dataset_version_uuid
+  - dataset_fields(uuid) ← column_lineage.output_dataset_field_uuid
+  - jobs(uuid) ← job_facets.job_uuid
+  - runs(uuid) ← job_facets.run_uuid
+  - All with ON DELETE CASCADE for cleanup
+
+  UUID Generation Strategy:
+  - Deterministic UUIDs: Dataset versions use content-based hashing (namespace + name + schema + run)
+  - Random UUIDs: Most entities use UUID.randomUUID() for uniqueness
+  - Run ID Conversion: String run IDs converted to UUIDs for consistency (OpenLineageDao.java:1143-1150)
+
+  Cross-Table Relationships:
+  - job_versions_io_mapping: Links jobs to input/output datasets via UUIDs
+  - runs_input_mapping: Connects runs to specific dataset versions consumed
+  - dataset_field_mapping: Associates dataset versions with their field definitions
+
+  Scaling Benefits:
+  - Index Performance: UUID foreign keys enable efficient B-tree indexes
+  - Distributed Systems: UUIDs avoid collision in distributed environments
+  - Graph Traversal: UUID references eliminate expensive string joins
+  - Data Integrity: Foreign key constraints prevent orphaned references
+  - Cascading Cleanup: ON DELETE CASCADE maintains referential integrity during deletions
+
+  This architecture enables Marquez to efficiently store, query, and maintain complex data lineage graphs while preserving
+  complete historical context and supporting both table-level and column-level lineage tracking.
+
+> explain in more detail: all lineage changes are stored as immutable OpenLineage events in JSONB format
+
+⏺ Read(api/src/test/resources/open_lineage/event_full.json)
+  ⎿  Read 212 lines (ctrl+r to expand)
+
+⏺ Read(api/src/test/resources/open_lineage/event_simple.json)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ Read(api/src/main/java/marquez/service/models/LineageEvent.java)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ Read(api/src/main/resources/marquez/db/migration/V17.2__open_lineage.sql)
+  ⎿  Read 14 lines (ctrl+r to expand)
+
+⏺ Search(pattern: "UPDATE.*lineage_events|DELETE.*lineage_events")
+  ⎿  Found 5 files (ctrl+r to expand)
+
+⏺ Read(api/src/main/java/marquez/db/OpenLineageDao.java)
+  ⎿  Read 14 lines (ctrl+r to expand)
+
+⏺ Read(api/src/main/java/marquez/db/DbRetention.java)
+  ⎿  Read 30 lines (ctrl+r to expand)
+
+⏺ Search(pattern: "JSONB.*index|jsonb.*GIN", glob: "**/*.sql", output_mode: "content")
+  ⎿  Found 0 lines 
+
+⏺ Read(api/src/main/java/marquez/db/OpenLineageDao.java)
+  ⎿  Read 50 lines (ctrl+r to expand)
+
+⏺ Detailed Analysis: OpenLineage Events as Immutable JSONB Storage
+
+  1. OpenLineage Event Structure
+
+  Complete Event Anatomy:
+  OpenLineage events are standardized JSON documents with a rich, nested structure containing:
+
+  Core Event Fields:
+  {
+    "eventType": "START|RUNNING|COMPLETE|ABORT|FAIL",
+    "eventTime": "2020-12-28T19:51:01.641Z",
+    "producer": "https://github.com/OpenLineage/OpenLineage/client",
+    "schemaURL": "https://openlineage.io/spec/1-0-1/OpenLineage.json"
+  }
+
+  Run Context:
+  "run": {
+    "runId": "ea041791-68bc-4ae1-bd89-4c8106a157e4",
+    "facets": {
+      "nominalTime": {
+        "nominalStartTime": "2020-12-17T03:00:00.001Z",
+        "nominalEndTime": "2020-12-17T04:00:00.001Z"
+      },
+      "parent": {
+        "run": {"runId": "parent-run-uuid"},
+        "job": {"namespace": "parent-namespace", "name": "parent-job"}
+      }
+    }
+  }
+
+  Job Definition:
+  "job": {
+    "namespace": "my-scheduler-namespace",
+    "name": "myjob.mytask",
+    "facets": {
+      "sql": {"query": "SELECT * FROM foo"},
+      "documentation": {"description": "Job description"},
+      "sourceCodeLocation": {"type": "git", "url": "http://example.com"}
+    }
+  }
+
+  Dataset Lineage (Inputs/Outputs):
+  "inputs": [{
+    "namespace": "my-datasource-namespace",
+    "name": "instance.schema.table",
+    "facets": {
+      "schema": {"fields": [{"name": "column1", "type": "VARCHAR"}]},
+      "dataSource": {"name": "postgres", "uri": "jdbc:postgresql://..."},
+      "columnLineage": {
+        "fields": {
+          "output_col": {
+            "inputFields": [
+              {"namespace": "ns", "name": "input_table", "field": "input_col"}
+            ],
+            "transformationDescription": "direct copy"
+          }
+        }
+      }
+    },
+    "inputFacets": {
+      "dataQualityMetrics": {"rowCount": 1000, "bytes": 1048576},
+      "dataQualityAssertions": {"assertions": [...]}
+    }
+  }]
+
+  2. JSONB Storage Implementation
+
+  Table Definition (V17.2__open_lineage.sql:3-13):
+  CREATE TABLE lineage_events (
+    event_time timestamp with time zone,
+    event jsonb,                    -- Complete OpenLineage event stored here
+    event_type text,               -- Extracted for indexing
+    run_id text,                   -- Extracted for queries
+    job_name text,                 -- Extracted for filtering
+    job_namespace text,            -- Extracted for scoping
+    producer text,                 -- Event source
+    CONSTRAINT lineage_event_pk PRIMARY KEY(event_time, event)
+  );
+
+  Event Serialization (OpenLineageDao.java:1152-1161):
+  default PGobject createJsonArray(BaseEvent event, ObjectMapper mapper) {
+    try {
+      PGobject jsonObject = new PGobject();
+      jsonObject.setType("json");                    // PostgreSQL JSONB type
+      jsonObject.setValue(mapper.writeValueAsString(event)); // Full event serialized
+      return jsonObject;
+    } catch (Exception e) {
+      throw new RuntimeException("Could write lineage event to db", e);
+    }
+  }
+
+  Event Insertion (OpenLineageDao.java:90-108):
+  @SqlUpdate("INSERT INTO lineage_events (event_type, event_time, run_uuid, job_name, job_namespace, event, producer, 
+  _event_type) VALUES (?, ?, ?, ?, ?, ?, ?, 'RUN_EVENT')")
+  void createLineageEvent(String eventType, Instant eventTime, UUID runUuid, String jobName, String jobNamespace, PGobject 
+  event, String producer);
+
+  3. Event Immutability Guarantees
+
+  Database-Level Immutability:
+  - No UPDATE Operations: Comprehensive search shows NO UPDATE statements targeting lineage_events table
+  - No DELETE Operations: Only retention policies (DbRetention.java) delete old events, never individual modifications
+  - Composite Primary Key: (event_time, event) prevents accidental duplicates
+  - Append-Only Design: New events always INSERT, never modify existing records
+
+  Application-Level Immutability:
+  - Event Processing: updateMarquezModel() methods (OpenLineageDao.java:167-178) only READ from events, never modify
+  - State Derivation: Current system state computed from event stream, original events untouched
+  - Replay Capability: Events can be reprocessed to rebuild corrupted state
+
+  Retention as Only Deletion:
+  - Time-Based: Events deleted only after configurable retention period
+  - Bulk Operations: Retention deletes entire time ranges, not selective modifications
+  - Audit Preservation: Critical events preserved beyond normal retention
+
+  4. JSONB Advantages for Event Storage
+
+  Schema Flexibility:
+  // Events can contain arbitrary facets without schema changes
+  "additionalProp1": {
+    "_producer": "custom-producer",
+    "_schemaURL": "custom-schema.json",
+    "customField": "value"
+  }
+
+  Efficient Storage:
+  - Binary Format: JSONB stored as binary, more compact than JSON text
+  - Duplicate Elimination: Identical keys/values shared across rows
+  - Compression: PostgreSQL applies compression to JSONB columns
+
+  Query Performance:
+  -- Extract specific facets without full deserialization
+  SELECT event->'job'->'facets'->'sql'->>'query' FROM lineage_events
+  WHERE event->'eventType' = '"COMPLETE"';
+
+  -- Array operations on inputs/outputs  
+  SELECT event->'inputs' FROM lineage_events
+  WHERE jsonb_array_length(event->'inputs') > 2;
+
+  Indexing Capabilities:
+  - GIN Indexes: Support complex queries on nested JSON structures
+  - Partial Indexes: Index specific event types or producers
+  - Expression Indexes: Index computed values from JSON fields
+
+  5. Event Processing and State Derivation
+
+  Multi-Step Processing Pipeline:
+
+  Step 1: Event Storage (OpenLineageDao.java:90-108)
+  // Event stored immutably in lineage_events
+  void createLineageEvent(eventType, eventTime, runUuid, jobName, jobNamespace, event, producer);
+
+  Step 2: State Extraction (OpenLineageDao.java:167-178)
+  default UpdateLineageRow updateMarquezModel(LineageEvent event, ObjectMapper mapper) {
+    UpdateLineageRow updateLineageRow = updateBaseMarquezModel(event, mapper);
+    // Extract normalized data structures from event
+    RunState runState = getRunState(event.getEventType());
+    // Update mutable state tables based on event content
+  }
+
+  Step 3: Normalized Table Updates (OpenLineageDao.java:287-404)
+  // Create/update normalized entities
+  NamespaceRow namespace = daos.getNamespaceDao().upsertNamespaceRow(...);
+  JobRow job = buildJobFromEvent(event.getJob(), ...);
+  RunRow run = daos.getRunDao().upsert(...);
+  List<DatasetRecord> inputs = upsertLineageDataset(event.getInputs(), ...);
+
+  Step 4: Graph Relationship Building
+  - job_versions_io_mapping: Links jobs to input/output datasets
+  - column_lineage: Processes columnLineage facets into relational structure
+  - dataset_versions: Creates versioned dataset snapshots
+  - runs_input_mapping: Associates runs with consumed dataset versions
+
+  6. Dual Storage Architecture
+
+  Event Store (lineage_events):
+  - Complete History: Full fidelity of all lineage changes
+  - Audit Trail: Immutable record for compliance and debugging
+  - Replay Source: Events can rebuild entire system state
+
+  Operational Store (normalized tables):
+  - Query Performance: Optimized for graph traversal and lineage queries
+  - Referential Integrity: Foreign keys ensure data consistency
+  - Current State: Reflects latest system state for real-time queries
+
+  Synchronization:
+  - Event-Driven Updates: Normalized tables updated from events
+  - Eventual Consistency: Brief delay between event storage and state updates
+  - Conflict Resolution: Latest event timestamp wins for conflicting updates
+
+  This architecture provides both the auditability and replay capabilities of event sourcing with the query performance and 
+  consistency of normalized relational storage, enabling Marquez to scale lineage tracking across large, complex data
+  environments while maintaining complete historical context.
